@@ -2,7 +2,7 @@ name: Automated Report
 
 on:
   schedule:
-    - cron: "0 * * * *" 
+    - cron: "0 * * * *"   # every hour
   workflow_dispatch:
 
 jobs:
@@ -23,9 +23,27 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
+    - name: Install Chrome
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget gnupg unzip
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+
+    - name: Install ChromeDriver
+      run: |
+        CHROME_VERSION=$(google-chrome --version | awk '{print $3}')
+        DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE")
+        wget -N "https://chromedriver.storage.googleapis.com/${DRIVER_VERSION}/chromedriver_linux64.zip"
+        unzip chromedriver_linux64.zip -d /usr/local/bin/
+        rm chromedriver_linux64.zip
+
     - name: Create credentials.json from secret
       run: |
         echo "${{ secrets.CREDENTIALS }}" > credentials.json
 
     - name: Run script
       run: python main.py
+
