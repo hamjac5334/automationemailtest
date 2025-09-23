@@ -7,7 +7,7 @@ from datetime import datetime
 USERNAME = "jackson@bogmayer.com"
 PASSWORD = "Rosie121!121"
 SENDER_EMAIL = "jackson@bogmayer.com"
-RECEIVER_EMAIL = "mason.holland@hollandplace.net"
+RECEIVER_EMAIL = "jackson@bogmayer.com"
 
 if __name__ == "__main__":
     print("Downloading report...")
