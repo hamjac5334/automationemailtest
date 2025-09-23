@@ -4,8 +4,8 @@ from gmail_utils import gmail_authenticate, send_message_with_attachment
 from datetime import datetime
 
 
-USERNAME = "jackson@bogmayer.com"
-PASSWORD = "Rosie121!121"
+USERNAME = DSD_USERNAME
+PASSWORD = DSD_PASSWORD
 SENDER_EMAIL = "jackson@bogmayer.com"
 RECEIVER_EMAIL = "jackson@bogmayer.com"
 
