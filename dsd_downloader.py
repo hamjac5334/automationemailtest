@@ -1,5 +1,6 @@
 import os
 import time
+import tempfile
 from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -8,16 +9,18 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
-options = webdriver.ChromeOptions()
-options.add_argument("--headless=new") 
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
 
-
+# Where downloaded reports will be stored
 DOWNLOAD_DIR = os.path.join(os.getcwd(), "AutomatedEmailData")
 
 def download_report(username, password):
     options = webdriver.ChromeOptions()
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    user_data_dir = tempfile.mkdtemp()
+    options.add_argument(f"--user-data-dir={user_data_dir}")
+
     prefs = {
         "download.default_directory": DOWNLOAD_DIR,
         "download.prompt_for_download": False,
@@ -29,6 +32,7 @@ def download_report(username, password):
     wait = WebDriverWait(driver, 30)
 
     try:
+        # Login
         driver.get("https://dsdlink.com/Home?DashboardID=185125")
         username_elem = wait.until(EC.presence_of_element_located((By.ID, "ews-login-username")))
         password_elem = wait.until(EC.presence_of_element_located((By.ID, "ews-login-password")))
@@ -36,9 +40,11 @@ def download_report(username, password):
         password_elem.send_keys(password, Keys.RETURN)
         time.sleep(5)
 
+        # Navigate to report
         driver.get("https://dsdlink.com/Home?DashboardID=100120&ReportID=22656753")
         time.sleep(5)
 
+        # Click export → CSV
         export_btn_host = wait.until(EC.presence_of_element_located((By.ID, "ActionButtonExport")))
         export_btn_root = driver.execute_script("return arguments[0].shadowRoot", export_btn_host)
         download_btn = export_btn_root.find_element(By.CSS_SELECTOR, "button.button")
@@ -49,12 +55,13 @@ def download_report(username, password):
         )
         csv_option.click()
 
+        # Wait for download to complete
         time.sleep(15)
 
     finally:
         driver.quit()
 
-    # rename files here
+    # Rename file
     original_filename = "Sales_By_Brand_&_124_Month-_pipeline_experiment.csv"
     original_filepath = os.path.join(DOWNLOAD_DIR, original_filename)
 
@@ -71,3 +78,4 @@ def download_report(username, password):
 
     os.rename(original_filepath, new_filepath)
     return new_filepath
+
