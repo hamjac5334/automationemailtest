@@ -2,10 +2,11 @@
 from dsd_downloader import download_report
 from gmail_utils import gmail_authenticate, send_message_with_attachment
 from datetime import datetime
+import os
 
 
-USERNAME = DSD_USERNAME
-PASSWORD = DSD_PASSWORD
+USERNAME = os.environ["DSD_USERNAME"]
+PASSWORD = os.environ["DSD_PASSWORD"]
 SENDER_EMAIL = "jackson@bogmayer.com"
 RECEIVER_EMAIL = "jackson@bogmayer.com"
 
