@@ -21,12 +21,10 @@ jobs:
       - name: Install dependencies
         run: |
           pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
-
-      # If you need credentials.json for Gmail API, add it as a repository secret
-      # and write it to a file at workflow runtime
+          
       - name: Prepare credentials
         run: |
-          echo "${{ secrets.GMAIL_CREDENTIALS_JSON }}" > automationemailtest/credentials.json
+          echo "${{ secrets.CREDENTIALS }}" > automationemailtest/credentials.json
 
       - name: Run main.py
         run: python automationemailtest/main.py
