@@ -28,10 +28,3 @@ jobs:
           DSD_USERNAME: ${{ secrets.DSD_USERNAME }}
           DSD_PASSWORD: ${{ secrets.DSD_PASSWORD }}
         run: python main.py
-
-      - name: Upload downloaded report
-        uses: actions/upload-artifact@v3
-        with:
-          name: dsd-report
-          path: AutomatedEmailData/*.csv
-
