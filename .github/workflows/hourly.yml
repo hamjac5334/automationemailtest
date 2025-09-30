@@ -2,11 +2,11 @@ name: Automated Report
 
 on:
   schedule:
-    - cron: "0 * * * *"   # runs at the start of every hour
-  workflow_dispatch:       # allow manual run from GitHub Actions tab
+    - cron: "0 * * * *"   # every hour
+  workflow_dispatch:      # allow manual run from GitHub UI
 
 jobs:
-  run-report:
+  run-script:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,14 +23,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Install Chrome
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
-
-      - name: Run report
+      - name: Run script
         env:
           DSD_USERNAME: ${{ secrets.DSD_USERNAME }}
           DSD_PASSWORD: ${{ secrets.DSD_PASSWORD }}
-        run: |
-          python main.py
+        run: python main.py
+
+      - name: Upload downloaded report
+        uses: actions/upload-artifact@v3
+        with:
+          name: dsd-report
+          path: AutomatedEmailData/*.csv
+
