@@ -2,7 +2,7 @@ name: Automated Report
 
 on:
   schedule:
-    - cron: "0 * * * *"   # every hour
+    - cron: "0 8 * * *"   # every hour
   workflow_dispatch:      # allow manual run from GitHub UI
 
 jobs:
