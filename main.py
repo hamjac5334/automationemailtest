@@ -13,9 +13,10 @@ print(f"Downloaded report to {report_path}")
 print("Sending email...")
 service = gmail_authenticate()
 send_email(
-    service,
-    "Daily Report", 
-    "Here is the report attached.",
-    report_path                        
+    service=service,
+    sender="jackson@bogmayer.com",
+    to="jackson@bogmayer.com",
+    subject="Daily Report",
+    attachment_path=report_path
 )
 print("Email sent!")
