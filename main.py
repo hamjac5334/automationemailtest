@@ -14,9 +14,8 @@ print("Sending email...")
 service = gmail_authenticate()
 send_email(
     service,
-    "me",  # uses the Gmail account from token.json
-    "Automated Report",
-    "Here is the latest report.",
-    report_path
+    "Daily Report", 
+    "Here is the report attached.",
+    report_path                        
 )
 print("Email sent!")
