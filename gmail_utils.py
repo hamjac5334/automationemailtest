@@ -1,47 +1,38 @@
 import os
-import pickle
 import base64
-from googleapiclient.discovery import build
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
-from email.mime.multipart import MIMEMultipart
+import pickle
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+from googleapiclient.discovery import build
+from google.auth.transport.requests import Request
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
 def gmail_authenticate():
-    creds = None
-    if os.path.exists("token.pickle"):
-        with open("token.pickle", "rb") as token:
-            creds = pickle.load(token)
+    # Load token.json from GitHub secret
+    token_data = os.environ.get("GMAIL_TOKEN")
+    if not token_data:
+        raise Exception("Missing GMAIL_TOKEN secret")
 
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
-            creds = flow.run_local_server(port=0)
-        with open("token.pickle", "wb") as token:
-            pickle.dump(creds, token)
-
+    creds = pickle.loads(base64.b64decode(token_data.encode()))
     return build("gmail", "v1", credentials=creds)
 
-def send_message_with_attachment(service, sender, to, subject, body_text, file):
+def send_email(service, sender, to, subject, body_text, attachment_path=None):
     message = MIMEMultipart()
     message["to"] = to
     message["from"] = sender
     message["subject"] = subject
     message.attach(MIMEText(body_text, "plain"))
 
-    # Attach file
-    with open(file, "rb") as f:
-        mime = MIMEBase("application", "octet-stream")
-        mime.set_payload(f.read())
-        encoders.encode_base64(mime)
-        mime.add_header("Content-Disposition", f"attachment; filename={os.path.basename(file)}")
-        message.attach(mime)
+    if attachment_path:
+        with open(attachment_path, "rb") as f:
+            part = MIMEBase("application", "octet-stream")
+            part.set_payload(f.read())
+        encoders.encode_base64(part)
+        part.add_header("Content-Disposition", f"attachment; filename=" + os.path.basename(attachment_path))
+        message.attach(part)
 
     raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
     return service.users().messages().send(userId="me", body={"raw": raw_message}).execute()
