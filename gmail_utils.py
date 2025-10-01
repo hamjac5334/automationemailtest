@@ -30,7 +30,7 @@ def send_email(service, sender, to, subject, attachment_path=None):
 
     if attachment_path:
         with open(attachment_path, "rb") as f:
-            part = MIMEBase("application", "octet-stream")
+            part = MIMEBase("text", "csv")
             part.set_payload(f.read())
         encoders.encode_base64(part)
         part.add_header("Content-Disposition", f"attachment; filename=" + os.path.basename(attachment_path))
