@@ -41,7 +41,7 @@ def download_report(username, password):
         time.sleep(5)
 
         # Navigate to report
-        driver.get("https://dsdlink.com/Home?DashboardID=100120&ReportID=22656753")
+        driver.get("https://dsdlink.com/Home?DashboardID=100120&ReportID=22818254")
         time.sleep(5)
 
         # Click export → CSV
