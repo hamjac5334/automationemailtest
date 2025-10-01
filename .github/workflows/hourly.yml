@@ -27,4 +27,7 @@ jobs:
         env:
           DSD_USERNAME: ${{ secrets.DSD_USERNAME }}
           DSD_PASSWORD: ${{ secrets.DSD_PASSWORD }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_RECIPIENT: ${{ secrets.GMAIL_RECIPIENT }}
+          GMAIL_TOKEN: ${{ secrets.GMAIL_TOKEN }}
         run: python main.py
