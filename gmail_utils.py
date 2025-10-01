@@ -23,8 +23,8 @@ def gmail_authenticate():
 
 def send_email(service, sender, to, subject, body_text, attachment_path=None):
     message = MIMEMultipart()
-    message["to"] = GMAIL_ADDRESS
-    message["from"] = GMAIL_RECIPIENT
+    message["to"] = "jackson@bogmayer.com"
+    message["from"] = "jackson.bogmayer.com"
     message["subject"] = "This is an email test"
     message.attach(MIMEText(body_text, "plain"))
 
