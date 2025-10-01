@@ -23,9 +23,9 @@ def gmail_authenticate():
 
 def send_email(service, sender, to, subject, body_text, attachment_path=None):
     message = MIMEMultipart()
-    message["to"] = to
-    message["from"] = sender
-    message["subject"] = subject
+    message["to"] = GMAIL_ADDRESS
+    message["from"] = GMAIL_RECIPIENT
+    message["subject"] = "This is an email test"
     message.attach(MIMEText(body_text, "plain"))
 
     if attachment_path:
