@@ -11,13 +11,15 @@ from google.auth.transport.requests import Request
 SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
 def gmail_authenticate():
-    # Load token.json from GitHub secret
-    token_data = os.environ.get("GMAIL_TOKEN")
-    if not token_data:
-        raise Exception("Missing GMAIL_TOKEN secret")
-
+    token_data = os.environ["GMAIL_TOKEN"]
     creds = pickle.loads(base64.b64decode(token_data.encode()))
-    return build("gmail", "v1", credentials=creds)
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+
+    service = build("gmail", "v1", credentials=creds)
+    return service
 
 def send_email(service, sender, to, subject, body_text, attachment_path=None):
     message = MIMEMultipart()
