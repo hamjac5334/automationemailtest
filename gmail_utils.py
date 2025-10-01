@@ -21,12 +21,12 @@ def gmail_authenticate():
     service = build("gmail", "v1", credentials=creds)
     return service
 
-def send_email(service, sender, to, subject, body_text, attachment_path=None):
+def send_email(service, sender, to, subject, attachment_path=None):
     message = MIMEMultipart()
     message["to"] = "jackson@bogmayer.com"
     message["from"] = "jackson.bogmayer.com"
     message["subject"] = "This is an email test"
-    message.attach(MIMEText(body_text, "plain"))
+    message.attach(MIMEText("plain"))
 
     if attachment_path:
         with open(attachment_path, "rb") as f:
