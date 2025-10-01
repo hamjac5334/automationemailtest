@@ -26,7 +26,7 @@ def send_email(service, sender, to, subject, attachment_path=None):
     message["to"] = to
     message["from"] = sender
     message["subject"] = subject
-    message.attach(MIMEText("Here is the test report attached from GitHub.", "plain"))
+    message.attach(MIMEText("Here is the test report attached from GitHub. This is just a sample report and for the next step I will include neccessary reports. This will run at 9am ET no matter what.", "plain"))
 
     if attachment_path:
         with open(attachment_path, "rb") as f:
