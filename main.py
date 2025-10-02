@@ -13,7 +13,8 @@ print(f"Downloaded report to {report_path}")
 print("Sending email...")
 service = gmail_authenticate()
 
-recipients = "jackson@bogmayer.com, mason.holland@hollandplace.net, chad.elkins@tapsandtables.net"
+#mason.holland@hollandplace.net, chad.elkins@tapsandtables.net
+recipients = "jackson@bogmayer.com"
 send_email(
     service=service,
     sender="jackson@bogmayer.com",
