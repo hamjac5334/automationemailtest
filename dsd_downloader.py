@@ -41,10 +41,14 @@ def download_report(username, password):
         time.sleep(5)
 
         # Navigate to report
-        driver.get("https://dsdlink.com/Home?DashboardID=100120&ReportID=22818254")
+        #change link based off of report
+        #original test df: https://dsdlink.com/Home?DashboardID=100120&ReportID=22818254
+        #adjusted inventory df: https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190
+        
+        driver.get("https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190")
         time.sleep(5)
 
-        # Click export → CSV
+        # Click export to CSV
         export_btn_host = wait.until(EC.presence_of_element_located((By.ID, "ActionButtonExport")))
         export_btn_root = driver.execute_script("return arguments[0].shadowRoot", export_btn_host)
         download_btn = export_btn_root.find_element(By.CSS_SELECTOR, "button.button")
@@ -62,7 +66,8 @@ def download_report(username, password):
         driver.quit()
 
     # Rename file
-    original_filename = "Sales_By_Brand_&_124_Month-_pipeline_experiment.csv"
+    #change the name of file depending on what report is running
+    original_filename = "Live_Inventory_Snapshot_automation_test.csv"
     original_filepath = os.path.join(DOWNLOAD_DIR, original_filename)
 
     timeout = 30
