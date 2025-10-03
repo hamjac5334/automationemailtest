@@ -13,32 +13,31 @@ SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 def gmail_authenticate():
     token_data = os.environ["GMAIL_TOKEN"]
     creds = pickle.loads(base64.b64decode(token_data.encode()))
+
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
+
     service = build("gmail", "v1", credentials=creds)
     return service
 
-def send_email(service, sender, to, subject, attachment_paths=None):
+def send_email(service, sender, to, subject, attachment_path=None):
     message = MIMEMultipart()
     message["to"] = to
     message["from"] = sender
     message["subject"] = subject
-    message.attach(MIMEText("Here are your daily reports attached.", "plain"))
+    message.attach(MIMEText("Here is the test report attached from GitHub. This is just a sample report and for the next step I will include neccessary reports. This will run at 9am ET no matter what.", "plain"))
 
-    if attachment_paths:
-        for attachment_path in attachment_paths:
-            with open(attachment_path, "rb") as f:
-                part = MIMEBase("text", "csv")
-                part.set_payload(f.read())
-            encoders.encode_base64(part)
-            part.add_header("Content-Disposition", f"attachment; filename={os.path.basename(attachment_path)}")
-            message.attach(part)
+    if attachment_path:
+        with open(attachment_path, "rb") as f:
+            part = MIMEBase("text", "csv")
+            part.set_payload(f.read())
+        encoders.encode_base64(part)
+        part.add_header("Content-Disposition", f"attachment; filename=" + os.path.basename(attachment_path))
+        message.attach(part)
 
     raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
     return service.users().messages().send(userId="me", body={"raw": raw_message}).execute()
-
-
 
 
 
