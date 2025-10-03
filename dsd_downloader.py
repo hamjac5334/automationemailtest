@@ -69,3 +69,4 @@ def download_report(username, password, report_url, original_filename, new_filen
     new_path = os.path.join(DOWNLOAD_DIR, new_filename)
     os.rename(original_path, new_path)
     return new_path
+
