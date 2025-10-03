@@ -13,14 +13,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 # Where downloaded reports will be stored
 DOWNLOAD_DIR = os.path.join(os.getcwd(), "AutomatedEmailData")
 
-def download_reports(username, password, report_links):
-    """
-    Downloads multiple reports from DSDLink given full URLs.
-    :param username: DSD username
-    :param password: DSD password
-    :param report_links: List of tuples [(url, filename_prefix), ...]
-    :return: List of downloaded file paths
-    """
+def download_report(username, password):
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
@@ -37,10 +30,9 @@ def download_reports(username, password, report_links):
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     wait = WebDriverWait(driver, 30)
-    downloaded_files = []
 
     try:
-        # Login once
+        # Login
         driver.get("https://dsdlink.com/Home?DashboardID=185125")
         username_elem = wait.until(EC.presence_of_element_located((By.ID, "ews-login-username")))
         password_elem = wait.until(EC.presence_of_element_located((By.ID, "ews-login-password")))
@@ -48,46 +40,46 @@ def download_reports(username, password, report_links):
         password_elem.send_keys(password, Keys.RETURN)
         time.sleep(5)
 
-        # Loop over all report links
-        for url, prefix in report_links:
-            driver.get(url)
-            time.sleep(5)
+        # Navigate to report
+        #change link based off of report
+        #original test df: https://dsdlink.com/Home?DashboardID=100120&ReportID=22818254
+        #adjusted inventory df: https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190
+        
+        driver.get("https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190")
+        time.sleep(5)
 
-            # Click export to CSV
-            export_btn_host = wait.until(EC.presence_of_element_located((By.ID, "ActionButtonExport")))
-            export_btn_root = driver.execute_script("return arguments[0].shadowRoot", export_btn_host)
-            download_btn = export_btn_root.find_element(By.CSS_SELECTOR, "button.button")
-            download_btn.click()
+        # Click export to CSV
+        export_btn_host = wait.until(EC.presence_of_element_located((By.ID, "ActionButtonExport")))
+        export_btn_root = driver.execute_script("return arguments[0].shadowRoot", export_btn_host)
+        download_btn = export_btn_root.find_element(By.CSS_SELECTOR, "button.button")
+        download_btn.click()
 
-            csv_option = wait.until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, '.ews-menu-item[format="CSV"]'))
-            )
-            csv_option.click()
+        csv_option = wait.until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, '.ews-menu-item[format="CSV"]'))
+        )
+        csv_option.click()
 
-            # Wait for download
-            time.sleep(15)
-
-            # Rename file
-            original_filename = "Live_Inventory_Snapshot_automation_test.csv"  # adjust if export filename differs
-            original_filepath = os.path.join(DOWNLOAD_DIR, original_filename)
-
-            timeout = 30
-            start_time = time.time()
-            while not os.path.exists(original_filepath):
-                time.sleep(1)
-                if time.time() - start_time > timeout:
-                    raise Exception(f"Download for {prefix} not found.")
-
-            date_str = datetime.now().strftime("%Y-%m-%d")
-            new_filename = f"{prefix}_{date_str}.csv"
-            new_filepath = os.path.join(DOWNLOAD_DIR, new_filename)
-
-            os.rename(original_filepath, new_filepath)
-            downloaded_files.append(new_filepath)
+        # Wait for download to complete
+        time.sleep(15)
 
     finally:
         driver.quit()
 
-    return downloaded_files
+    # Rename file
+    #change the name of file depending on what report is running
+    original_filename = "Live_Inventory_Snapshot_automation_test.csv"
+    original_filepath = os.path.join(DOWNLOAD_DIR, original_filename)
 
+    timeout = 30
+    start_time = time.time()
+    while not os.path.exists(original_filepath):
+        time.sleep(1)
+        if time.time() - start_time > timeout:
+            raise Exception("Download file not found.")
 
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    new_filename = f"Report_{date_str}.csv"
+    new_filepath = os.path.join(DOWNLOAD_DIR, new_filename)
+
+    os.rename(original_filepath, new_filepath)
+    return new_filepath
