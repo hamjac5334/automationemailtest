@@ -14,7 +14,7 @@ print("Sending email...")
 service = gmail_authenticate()
 
 #mason.holland@hollandplace.net, chad.elkins@tapsandtables.net
-recipients = "jackson@bogmayer.com,mason.holland@hollandplace.net, chad.elkins@tapsandtables.net "
+recipients = "jackson@bogmayer.com"
 send_email(
     service=service,
     sender="jackson@bogmayer.com",
