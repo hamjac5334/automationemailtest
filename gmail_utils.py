@@ -27,7 +27,7 @@ def send_email_with_attachments(service, sender, to, subject, attachment_paths=N
     attachment_paths should be a list of file paths.
     """
     message = MIMEMultipart()
-    message["to"] = to
+    message["to"] = ", ".join(to) if isinstance(to, list) else str(to).strip()
     message["from"] = sender
     message["subject"] = subject
     message.attach(MIMEText(
