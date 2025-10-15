@@ -18,10 +18,13 @@ reports = [
 
 downloaded_files = []
 for r in reports:
-    print(f"Downloading {r['name']}...")
-    path = download_report(USERNAME, PASSWORD, r["name"], r["url"])
-    downloaded_files.append(path)
-    print(f"Downloaded: {path}")
+    for attempt in range(3):  # Retry up to 3 times
+        try:
+            path = download_report(USERNAME, PASSWORD, r["name"], r["url"])
+            downloaded_files.append(path)
+            break
+        except Exception as e:
+            sleep(5)
 
 print("All reports downloaded successfully.")
 
