@@ -10,15 +10,20 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
-# Folder where all CSVs are stored
+# Where downloaded reports will be stored
 DOWNLOAD_DIR = os.path.join(os.getcwd(), "AutomatedEmailData")
 
-def download_report(username, password, report_name, report_url):
-    """Downloads a single report and returns its file path."""
+def download_report(username, password):
     options = webdriver.ChromeOptions()
+
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+
+    # Create a temporary user data directory
     user_data_dir = tempfile.mkdtemp()
     options.add_argument(f"--user-data-dir={user_data_dir}")
 
@@ -30,42 +35,50 @@ def download_report(username, password, report_name, report_url):
     options.add_experimental_option("prefs", prefs)
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    driver.set_page_load_timeout(180)  # ⏱ Extend timeout to handle slow loads
     wait = WebDriverWait(driver, 30)
 
-    #see if this works to make encompass not crash
-    driver.set_page_load_timeout(180)
-
-    #edit this next if it doesn't work
     try:
-        # Login
-        driver.get("https://dsdlink.com/Home?DashboardID=185125")
+        for attempt in range(3):
+            try:
+                print(f"Attempt {attempt + 1} to open DSDLink...")
+                driver.get("https://dsdlink.com/Home?DashboardID=185125")
+                print("Successfully loaded DSDLink.")
+                break
+            except Exception as e:
+                print(f"Attempt {attempt + 1} failed: {e}")
+                if attempt < 2:
+                    print("Retrying in 10 seconds...")
+                    time.sleep(10)
+                else:
+                    raise Exception("DSDLink failed to load after 3 attempts.")
+
         username_elem = wait.until(EC.presence_of_element_located((By.ID, "ews-login-username")))
         password_elem = wait.until(EC.presence_of_element_located((By.ID, "ews-login-password")))
         username_elem.send_keys(username)
         password_elem.send_keys(password, Keys.RETURN)
         time.sleep(5)
 
-        # Navigate to the specific report URL
-        driver.get(report_url)
+        driver.get("https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190")
         time.sleep(5)
 
-        # Export CSV
         export_btn_host = wait.until(EC.presence_of_element_located((By.ID, "ActionButtonExport")))
         export_btn_root = driver.execute_script("return arguments[0].shadowRoot", export_btn_host)
         download_btn = export_btn_root.find_element(By.CSS_SELECTOR, "button.button")
         download_btn.click()
 
-        csv_option = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, '.ews-menu-item[format="CSV"]')))
+        csv_option = wait.until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, '.ews-menu-item[format="CSV"]'))
+        )
         csv_option.click()
 
-        # Wait for file download
-        time.sleep(15)
+        print("CSV export initiated. Waiting for download to complete...")
+        time.sleep(20)  # Give time for download to finish
 
     finally:
         driver.quit()
 
-    # Rename downloaded file
-    original_filename = "Live_Inventory_Snapshot_automation_test.csv"  # your current file name
+    original_filename = "Live_Inventory_Snapshot_automation_test.csv"
     original_filepath = os.path.join(DOWNLOAD_DIR, original_filename)
 
     timeout = 30
@@ -73,12 +86,13 @@ def download_report(username, password, report_name, report_url):
     while not os.path.exists(original_filepath):
         time.sleep(1)
         if time.time() - start_time > timeout:
-            raise Exception(f"Download file for {report_name} not found.")
+            raise Exception("Download file not found.")
 
     date_str = datetime.now().strftime("%Y-%m-%d")
-    new_filename = f"{report_name}_{date_str}.csv"
+    new_filename = f"Report_{date_str}.csv"
     new_filepath = os.path.join(DOWNLOAD_DIR, new_filename)
 
     os.rename(original_filepath, new_filepath)
-    return new_filepath
+    print(f"Report saved as: {new_filepath}")
 
+    return new_filepath
