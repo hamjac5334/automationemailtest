@@ -13,7 +13,11 @@ from webdriver_manager.chrome import ChromeDriverManager
 # Where downloaded reports will be stored
 DOWNLOAD_DIR = os.path.join(os.getcwd(), "AutomatedEmailData")
 
-def download_report(username, password):
+def download_report(username, password, report_number=1):
+    """
+    Download a report from DSDLink and rename it uniquely using report_number.
+    """
+    # Selenium setup (same as your GitHub version)
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
@@ -40,33 +44,24 @@ def download_report(username, password):
         password_elem.send_keys(password, Keys.RETURN)
         time.sleep(5)
 
-        # Navigate to report
-        #change link based off of report
-        #original test df: https://dsdlink.com/Home?DashboardID=100120&ReportID=22818254
-        #adjusted inventory df: https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190
-        
+        # Navigate to report (change link if needed)
         driver.get("https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190")
         time.sleep(5)
 
-        # Click export to CSV
+        # Export CSV
         export_btn_host = wait.until(EC.presence_of_element_located((By.ID, "ActionButtonExport")))
         export_btn_root = driver.execute_script("return arguments[0].shadowRoot", export_btn_host)
         download_btn = export_btn_root.find_element(By.CSS_SELECTOR, "button.button")
         download_btn.click()
 
-        csv_option = wait.until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, '.ews-menu-item[format="CSV"]'))
-        )
+        csv_option = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, '.ews-menu-item[format="CSV"]')))
         csv_option.click()
-
-        # Wait for download to complete
         time.sleep(15)
 
     finally:
         driver.quit()
 
-    # Rename file
-    #change the name of file depending on what report is running
+    # Rename file uniquely
     original_filename = "Live_Inventory_Snapshot_automation_test.csv"
     original_filepath = os.path.join(DOWNLOAD_DIR, original_filename)
 
@@ -78,8 +73,8 @@ def download_report(username, password):
             raise Exception("Download file not found.")
 
     date_str = datetime.now().strftime("%Y-%m-%d")
-    new_filename = f"Report_{date_str}.csv"
+    new_filename = f"Report_{date_str}_{report_number}.csv"  # unique
     new_filepath = os.path.join(DOWNLOAD_DIR, new_filename)
-
     os.rename(original_filepath, new_filepath)
+
     return new_filepath
