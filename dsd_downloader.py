@@ -32,6 +32,10 @@ def download_report(username, password, report_name, report_url):
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     wait = WebDriverWait(driver, 30)
 
+    #see if this works to make encompass not crash
+    driver.set_page_load_timeout(180)
+
+    #edit this next if it doesn't work
     try:
         # Login
         driver.get("https://dsdlink.com/Home?DashboardID=185125")
