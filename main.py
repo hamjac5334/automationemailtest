@@ -1,6 +1,6 @@
 #init everything
 from dsd_downloader import download_report
-from gmail_utils import gmail_authenticate, send_email
+from gmail_utils import gmail_authenticate, send_email_with_attachments
 import os
 
 USERNAME = os.environ["DSD_USERNAME"]
