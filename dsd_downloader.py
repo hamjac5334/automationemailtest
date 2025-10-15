@@ -18,9 +18,8 @@ def download_report(username, password):
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--remote-debugging-port=9222")
+    user_data_dir = tempfile.mkdtemp()
+    options.add_argument(f"--user-data-dir={user_data_dir}")
 
     prefs = {
         "download.default_directory": DOWNLOAD_DIR,
@@ -29,10 +28,7 @@ def download_report(username, password):
     }
     options.add_experimental_option("prefs", prefs)
 
-    # ✅ Use the system ChromeDriver path
-    service = Service("/usr/bin/chromedriver")
-
-    driver = webdriver.Chrome(service=service, options=options)
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     wait = WebDriverWait(driver, 30)
 
     try:
