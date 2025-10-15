@@ -22,20 +22,18 @@ def gmail_authenticate():
     return service
 
 def send_email_with_attachments(service, sender, to, subject, attachment_paths=None):
-    """
-    Send an email with multiple attachments.
-    attachment_paths should be a list of file paths.
-    """
+    
     message = MIMEMultipart()
-    message["to"] = ", ".join(to) if isinstance(to, list) else str(to).strip()
-    message["from"] = sender
-    message["subject"] = subject
+    message["To"] = ", ".join(to) if isinstance(to, list) else str(to).strip()
+    message["From"] = sender.strip()
+    message["Subject"] = subject.strip()
     message.attach(MIMEText(
         "Here are the automated reports attached from GitHub. "
-        "This runs daily at 9am ET and includes multiple reports.", 
+        "This runs daily at 9am ET and includes multiple reports.",
         "plain"
     ))
 
+    # Attach all CSVs
     if attachment_paths:
         for path in attachment_paths:
             with open(path, "rb") as f:
@@ -45,6 +43,8 @@ def send_email_with_attachments(service, sender, to, subject, attachment_paths=N
             part.add_header("Content-Disposition", f"attachment; filename={os.path.basename(path)}")
             message.attach(part)
 
+    # (Optional) Debug print
+    print(f"DEBUG — Sending email to: '{message['To']}'")
+
     raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
     return service.users().messages().send(userId="me", body={"raw": raw_message}).execute()
-
