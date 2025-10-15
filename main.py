@@ -13,9 +13,7 @@ print("Starting report downloads...")
 # Define the reports to download
 reports = [
     {"name": "Inventory_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190"},
-    {"name": "Sales_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835191"},
-    {"name": "Delivery_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835192"},
-    {"name": "Returns_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835193"},
+    {"name": "Sales_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190"},
 ]
 
 # Download all reports in a single browser session
