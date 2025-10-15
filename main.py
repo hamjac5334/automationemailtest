@@ -2,6 +2,7 @@
 from dsd_downloader import download_report
 from gmail_utils import gmail_authenticate, send_email
 import os
+from time import sleep
 
 USERNAME = os.environ["DSD_USERNAME"]
 PASSWORD = os.environ["DSD_PASSWORD"]
