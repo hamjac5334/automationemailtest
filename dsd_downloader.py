@@ -39,7 +39,7 @@ def download_reports(username, password, reports):
     options.add_experimental_option("prefs", prefs)
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    wait = WebDriverWait(driver, 30)
+    wait = WebDriverWait(driver, 60)
     downloaded_files = []
 
     try:
