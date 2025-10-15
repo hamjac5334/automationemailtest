@@ -20,7 +20,11 @@ for i in range(4):
 service = gmail_authenticate()
 
 #mason.holland@hollandplace.net, chad.elkins@tapsandtables.net
-recipients = os.environ.get("GMAIL_RECIPIENT", "jackson@bogmayer.com").strip()
+recipients = os.environ.get("GMAIL_RECIPIENT")
+if not recipients or "@" not in recipients:
+    recipients = "jackson@bogmayer.com"
+recipients = recipients.strip()
+print(f"Sending to: {recipients}")
 
 send_email_with_attachments(
     service=service,
