@@ -1,31 +1,25 @@
+#mason.holland@hollandplace.net, chad.elkins@tapsandtables.net
+
 #init everything
-from dsd_downloader import download_report
+from dsd_downloader import download_reports
 from gmail_utils import gmail_authenticate, send_email
 import os
-from time import sleep
 
 USERNAME = os.environ["DSD_USERNAME"]
 PASSWORD = os.environ["DSD_PASSWORD"]
 
 print("Starting report downloads...")
 
-#  Add your actual report URLs here
+# Define the reports to download
 reports = [
     {"name": "Inventory_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190"},
-    {"name": "Sales_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190"},
-    {"name": "Delivery_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190"},
-    {"name": "Returns_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190"},
+    {"name": "Sales_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835191"},
+    {"name": "Delivery_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835192"},
+    {"name": "Returns_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835193"},
 ]
 
-downloaded_files = []
-for r in reports:
-    for attempt in range(3):  # Retry up to 3 times
-        try:
-            path = download_report(USERNAME, PASSWORD, r["name"], r["url"])
-            downloaded_files.append(path)
-            break
-        except Exception as e:
-            sleep(5)
+# Download all reports in a single browser session
+downloaded_files = download_reports(USERNAME, PASSWORD, reports)
 
 print("All reports downloaded successfully.")
 
@@ -33,14 +27,12 @@ print("All reports downloaded successfully.")
 print("Authenticating Gmail...")
 service = gmail_authenticate()
 
-#mason.holland@hollandplace.net, chad.elkins@tapsandtables.net
 recipients = "jackson@bogmayer.com"
 send_email(
     service=service,
     sender="jackson@bogmayer.com",
     to=recipients,
     subject="Daily Report",
-    attachment_path=downloaded_files
+    attachment_paths=downloaded_files
 )
 print("Email sent!")
-
