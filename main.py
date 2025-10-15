@@ -6,11 +6,27 @@ import os
 USERNAME = os.environ["DSD_USERNAME"]
 PASSWORD = os.environ["DSD_PASSWORD"]
 
-print("Downloading report...")
-report_path = download_report(USERNAME, PASSWORD)
-print(f"Downloaded report to {report_path}")
+print("Starting report downloads...")
 
-print("Sending email...")
+#  Add your actual report URLs here
+reports = [
+    {"name": "Inventory_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190"},
+    {"name": "Sales_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190"},
+    {"name": "Delivery_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190"},
+    {"name": "Returns_Report", "url": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22835190"},
+]
+
+downloaded_files = []
+for r in reports:
+    print(f"Downloading {r['name']}...")
+    path = download_report(USERNAME, PASSWORD, r["name"], r["url"])
+    downloaded_files.append(path)
+    print(f"Downloaded: {path}")
+
+print("All reports downloaded successfully.")
+
+# Authenticate Gmail
+print("Authenticating Gmail...")
 service = gmail_authenticate()
 
 #mason.holland@hollandplace.net, chad.elkins@tapsandtables.net
@@ -20,7 +36,7 @@ send_email(
     sender="jackson@bogmayer.com",
     to=recipients,
     subject="Daily Report",
-    attachment_path=report_path
+    attachment_path=downloaded_files
 )
 print("Email sent!")
 
