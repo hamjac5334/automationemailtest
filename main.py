@@ -19,7 +19,7 @@ reports = [
 downloaded_files = []
 for r in reports:
     print(f"Downloading {r['name']}...")
-    path = download_report(USERNAME, PASSWORD, r["name"], r["url"])
+    path = download_report(USERNAME, PASSWORD)
     downloaded_files.append(path)
     print(f"Downloaded: {path}")
 
