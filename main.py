@@ -29,7 +29,7 @@ print(f"Sending to: {recipients}")
 send_email_with_attachments(
     service=service,
     sender=os.environ["GMAIL_ADDRESS"],
-    to=recipients,
+    to="jackson@bogmayer.com",
     subject="Daily Automated Reports",
     attachment_paths=report_paths
 )
