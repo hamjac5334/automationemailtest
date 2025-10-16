@@ -94,4 +94,22 @@ def download_report(username, password, url):
         if not downloaded_files:
             raise Exception("No downloaded file found in /tmp directory")
 
-        latest_file = max([os.path.j]()_
+        latest_file = max([os.path.join("/tmp", f) for f in downloaded_files], key=os.path.getmtime)
+        final_path = os.path.join(download_dir, os.path.basename(latest_file))
+        os.rename(latest_file, final_path)
+
+        print(f"Report downloaded successfully: {final_path}")
+        return final_path
+
+    except Exception as e:
+        debug_dir = os.path.join(os.getcwd(), "AutomatedEmailData")
+        ensure_dir(debug_dir)
+        debug_path = os.path.join(debug_dir, "debug_page.html")
+        with open(debug_path, "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
+        print(f"Saved page source to {debug_path} for debugging.")
+        raise e
+
+    finally:
+        driver.quit()
+
