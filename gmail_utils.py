@@ -21,30 +21,39 @@ def gmail_authenticate():
     service = build("gmail", "v1", credentials=creds)
     return service
 
-def send_email_with_attachments(service, sender, to, subject, attachment_paths=None):
-    
+def send_email_with_attachments(sender, to, subject, body, attachments, creds_path="token.json"):
+    """
+    Send an email with multiple attachments using Gmail API.
+    """
+    # Load credentials
+    creds = Credentials.from_authorized_user_file(creds_path, ['https://www.googleapis.com/auth/gmail.send'])
+    service = build('gmail', 'v1', credentials=creds)
+
+    # Create the email
     message = MIMEMultipart()
-    message["To"] = ", ".join(to) if isinstance(to, list) else str(to).strip()
-    message["From"] = sender.strip()
-    message["Subject"] = subject.strip()
-    message.attach(MIMEText(
-        "Here are the automated reports attached from GitHub. "
-        "This runs daily at 9am ET and includes multiple reports.",
-        "plain"
-    ))
+    message['From'] = sender
+    message['To'] = to
+    message['Subject'] = subject
 
-    # Attach all CSVs
-    if attachment_paths:
-        for path in attachment_paths:
-            with open(path, "rb") as f:
-                part = MIMEBase("text", "csv")
-                part.set_payload(f.read())
-            encoders.encode_base64(part)
-            part.add_header("Content-Disposition", f"attachment; filename={os.path.basename(path)}")
-            message.attach(part)
+    # Add body
+    message.attach(MIMEText(body, 'plain'))
 
-    # (Optional) Debug print
-    print(f"DEBUG — Sending email to: '{message['To']}'")
+    # Attach files
+    for file_path in attachments:
+        part = MIMEBase('application', 'octet-stream')
+        with open(file_path, 'rb') as f:
+            part.set_payload(f.read())
+        encoders.encode_base64(part)
+        part.add_header(
+            'Content-Disposition',
+            f'attachment; filename="{file_path.split("/")[-1]}"'
+        )
+        message.attach(part)
 
+    # Encode and send
     raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-    return service.users().messages().send(userId="me", body={"raw": raw_message}).execute()
+    try:
+        service.users().messages().send(userId="me", body={'raw': raw_message}).execute()
+        print("✅ Email sent successfully.")
+    except Exception as e:
+        print(f"❌ Failed to send email: {e}")
