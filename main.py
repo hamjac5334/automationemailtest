@@ -7,7 +7,7 @@ from gmail_utils import send_email_with_attachments
 USERNAME = os.environ.get("DSD_USERNAME")
 PASSWORD = os.environ.get("DSD_PASSWORD")
 GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
-GMAIL_RECIPIENTS = ["jackson@bogmayer.com", "jack.hamilton@comcast.net", "hamiltonjm3@hendrix.edu"]
+GMAIL_RECIPIENTS = ["jackson@bogmayer.com", "mason.holland@hollandplace.net", "chad.elkins@tapsandtables.net"]
 
 # List of report URLs and names (optional friendly names)
 REPORTS = [
