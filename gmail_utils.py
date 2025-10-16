@@ -22,12 +22,18 @@ def gmail_authenticate():
     service = build("gmail", "v1", credentials=creds)
     return service
 
-def send_email_with_attachments(sender, to, subject, body, attachments, creds_path="token.json"):
+def send_email_with_attachments(sender, to, subject, body, attachments):
     """
-    Send an email with multiple attachments using Gmail API.
+    Send an email with multiple attachments using Gmail API using the GMAIL_TOKEN env variable.
     """
-    # Load credentials
-    creds = Credentials.from_authorized_user_file(creds_path, ['https://www.googleapis.com/auth/gmail.send'])
+    # Load credentials from env variable
+    token_data = os.environ["GMAIL_TOKEN"]
+    creds = pickle.loads(base64.b64decode(token_data.encode()))
+
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+
     service = build('gmail', 'v1', credentials=creds)
 
     # Create the email
@@ -47,7 +53,7 @@ def send_email_with_attachments(sender, to, subject, body, attachments, creds_pa
         encoders.encode_base64(part)
         part.add_header(
             'Content-Disposition',
-            f'attachment; filename="{file_path.split("/")[-1]}"'
+            f'attachment; filename="{os.path.basename(file_path)}"'
         )
         message.attach(part)
 
