@@ -7,6 +7,7 @@ from email.mime.base import MIMEBase
 from email import encoders
 from googleapiclient.discovery import build
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
