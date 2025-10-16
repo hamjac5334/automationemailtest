@@ -61,12 +61,23 @@ def download_report(username, password, url, max_wait_seconds=90):
 
         # Step 1 — Log in
         print("Opening login page...")
-        driver.get("https://dsdlink.com/Home?DashboardID=185125")
-        username_elem = wait.until(EC.presence_of_element_located((By.ID, "ews-login-username")))
-        password_elem = wait.until(EC.presence_of_element_located((By.ID, "ews-login-password")))
-        username_elem.send_keys(username)
-        password_elem.send_keys(password, Keys.RETURN)
-        time.sleep(5)  # allow login to complete
+        driver.get("https://dsdlink.com/Login")
+        time.sleep(5)
+        if "Home?" in driver.current_url:
+            print("Already logged in.")
+        else:
+            try:
+                username_elem = wait.until(
+                    EC.presence_of_element_located((By.ID, "ews-login-username"))
+                )
+                password_elem = driver.find_element(By.ID, "ews-login-password")
+                username_elem.send_keys(username)
+                password_elem.send_keys(password, Keys.RETURN)
+                print("Login submitted.")
+                time.sleep(7)
+            except Exception as e:
+                print("Login form not found — might already be logged in or redirected.")
+                print(f"Current URL: {driver.current_url}")
 
         # Step 2 — Navigate to the report URL
         print(f"Navigating to report URL: {url}")
