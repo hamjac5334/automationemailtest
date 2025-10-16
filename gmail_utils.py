@@ -61,6 +61,6 @@ def send_email_with_attachments(sender, to, subject, body, attachments):
     raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
     try:
         service.users().messages().send(userId="me", body={'raw': raw_message}).execute()
-        print("✅ Email sent successfully.")
+        print("Email sent successfully.")
     except Exception as e:
-        print(f"❌ Failed to send email: {e}")
+        print(f"Failed to send email: {e}")
