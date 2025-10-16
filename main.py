@@ -38,7 +38,7 @@ body = "Hi,\n\nAttached are the latest DSD reports.\n\nBest regards,\nAutomated 
 
 try:
     send_email_with_attachments(
-        service=None,  # update if you initialize the Gmail API service in gmail_utils
+        service=service,  # update if you initialize the Gmail API service in gmail_utils
         sender=GMAIL_ADDRESS,
         to=GMAIL_RECIPIENT,
         subject=subject,
