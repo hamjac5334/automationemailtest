@@ -39,7 +39,8 @@ to_header = ", ".join(GMAIL_RECIPIENTS)
 subject = "Automated DSD Reports"
 body = """This is an automated email test.
 
-Attached are the latest DSD reports. I need to rename them after I download them so that are more descriptive. 
+Attached are the latest DSD reports. I need to rename them after I download them so that they are more descriptive. 
+
 These are all live inventory snapshots of:
 1.SCP/KW in SC 
 2. SCP in GA
