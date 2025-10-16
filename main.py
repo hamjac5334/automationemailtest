@@ -7,7 +7,7 @@ from gmail_utils import send_email_with_attachments
 USERNAME = os.environ.get("DSD_USERNAME")
 PASSWORD = os.environ.get("DSD_PASSWORD")
 GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
-GMAIL_RECIPIENT = "jackson@bogmayer.com"  # directly send to this email
+GMAIL_RECIPIENTS = ["jackson@bogmayer.com", "jack.hamilton@comcast.net", "hamiltonjm3@hendrix.edu"]
 
 # List of report URLs and names (optional friendly names)
 REPORTS = [
@@ -26,11 +26,14 @@ for i, (report_name, url) in enumerate(REPORTS, start=1):
         path = download_report(USERNAME, PASSWORD, url, report_number=i)
         downloaded_files.append(path)
     except Exception as e:
-        print(f"⚠️ Failed to download {report_name}: {e}")
+        print(f" Failed to download {report_name}: {e}")
 
 if not downloaded_files:
-    print("❌ No reports downloaded. Exiting.")
+    print(" No reports downloaded. Exiting.")
     exit(1)
+
+#adjussts recipients
+to_header = ", ".join(GMAIL_RECIPIENTS)
 
 # Send email with all downloaded reports attached
 subject = "Automated DSD Reports"
@@ -39,11 +42,11 @@ body = "Hi,\n\nAttached are the latest DSD reports.\n\nBest regards,\nAutomated 
 try:
     send_email_with_attachments(
         sender=GMAIL_ADDRESS,
-        to=GMAIL_RECIPIENT,
+        to=to_header,
         subject=subject,
         body=body,
         attachments=downloaded_files
     )
-    print("\n✅ Email sent successfully.")
+    print("\nEmail sent successfully.")
 except Exception as e:
-    print(f"\n❌ Failed to send email: {e}")
+    print(f"\n Failed to send email: {e}")
