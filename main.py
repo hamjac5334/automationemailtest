@@ -1,63 +1,50 @@
 #init everything
 import os
-import sys
 from dsd_downloader import download_report
 from gmail_utils import send_email_with_attachments
 
-print("Downloading reports...")
+# Credentials from GitHub secrets or environment variables
+USERNAME = os.environ.get("DSD_USERNAME")
+PASSWORD = os.environ.get("DSD_PASSWORD")
+GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
+GMAIL_RECIPIENT = "jackson@bogmayer.com"  # directly send to this email
 
-USERNAME = os.getenv("DSD_USERNAME")
-PASSWORD = os.getenv("DSD_PASSWORD")
-EMAIL_SENDER = os.getenv("GMAIL_ADDRESS")
-EMAIL_RECIPIENT = os.getenv("GMAIL_RECIPIENT")
-EMAIL_TOKEN = os.getenv("GMAIL_TOKEN")
+# List of report URLs and names (optional friendly names)
+REPORTS = [
+    ("Sales Summary", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972383"),
+    ("Brand Performance", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972382"),
+    ("Weekly Volume", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972378"),
+    ("Retail Sales", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972365")
+]
 
-# ✅ Add all your report URLs here (customize as needed)
-REPORTS = {
-    "Sales Summary": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972383",
-    "Brand Performance": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972384",
-    "Weekly Volume": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972385",
-    "Retail Sales": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972386"
-}
-
-# ✅ Directory to save all reports
-OUTPUT_DIR = os.path.join(os.getcwd(), "AutomatedEmailData")
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
+# Download reports
 downloaded_files = []
-
-for name, url in REPORTS.items():
-    print(f"\nDownloading {name}...")
+print("Downloading reports...\n")
+for i, (report_name, url) in enumerate(REPORTS, start=1):
     try:
-        file_path = download_report(USERNAME, PASSWORD, url)
-        downloaded_files.append(file_path)
+        print(f"Downloading {report_name}...")
+        path = download_report(USERNAME, PASSWORD, url, report_number=i)
+        downloaded_files.append(path)
     except Exception as e:
-        print(f"⚠️ Failed to download {name}: {e}")
-        continue
+        print(f"⚠️ Failed to download {report_name}: {e}")
 
-# ✅ Verify at least one file downloaded
 if not downloaded_files:
     print("❌ No reports downloaded. Exiting.")
-    sys.exit(1)
+    exit(1)
 
-print("\n✅ All available reports downloaded:")
-for f in downloaded_files:
-    print(f" - {f}")
+# Send email with all downloaded reports attached
+subject = "Automated DSD Reports"
+body = "Hi,\n\nAttached are the latest DSD reports.\n\nBest regards,\nAutomated Report Bot"
 
-# ✅ Send the email with all downloaded reports attached
 try:
-    print("\nSending email with attachments...")
     send_email_with_attachments(
-        sender=EMAIL_SENDER,
-        recipient=EMAIL_RECIPIENT,
-        token=EMAIL_TOKEN,
-        subject="Automated DSD Reports",
-        body="Attached are the latest DSD reports from the automated system.",
+        service=None,  # update if you initialize the Gmail API service in gmail_utils
+        sender=GMAIL_ADDRESS,
+        to=GMAIL_RECIPIENT,
+        subject=subject,
+        body=body,
         attachments=downloaded_files
     )
-    print("✅ Email sent successfully.")
+    print("\n✅ Email sent successfully.")
 except Exception as e:
-    print(f"❌ Failed to send email: {e}")
-    sys.exit(1)
-
-print("\n🎉 Workflow completed successfully.")
+    print(f"\n❌ Failed to send email: {e}")
