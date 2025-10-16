@@ -2,7 +2,7 @@
 import os
 import sys
 from dsd_downloader import download_report
-from send_email import send_email_with_attachments
+from gmail_utils import send_email_with_attachments
 
 print("Downloading reports...")
 
