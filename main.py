@@ -1,55 +1,63 @@
 #init everything
-from dsd_downloader import download_report
-from gmail_utils import gmail_authenticate, send_email_with_attachments
 import os
-
-USERNAME = os.environ["DSD_USERNAME"]
-PASSWORD = os.environ["DSD_PASSWORD"]
-
-# Authenticate Gmail
-service = gmail_authenticate()
+import sys
+from dsd_downloader import download_report
+from send_email import send_email_with_attachments
 
 print("Downloading reports...")
 
-# Each report has a unique ReportID
-report_urls = {
+USERNAME = os.getenv("DSD_USERNAME")
+PASSWORD = os.getenv("DSD_PASSWORD")
+EMAIL_SENDER = os.getenv("GMAIL_ADDRESS")
+EMAIL_RECIPIENT = os.getenv("GMAIL_RECIPIENT")
+EMAIL_TOKEN = os.getenv("GMAIL_TOKEN")
+
+# ✅ Add all your report URLs here (customize as needed)
+REPORTS = {
     "Sales Summary": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972383",
-    "Brand Performance": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972382",
-    "Store-Level Trends": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972378",
-    "Distribution Report": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972365",
+    "Brand Performance": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972384",
+    "Weekly Volume": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972385",
+    "Retail Sales": "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972386"
 }
 
-report_paths = []
+# ✅ Directory to save all reports
+OUTPUT_DIR = os.path.join(os.getcwd(), "AutomatedEmailData")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# Loop through each URL and download the report
-for name, url in report_urls.items():
-    print(f"Downloading {name}...")
-    path = download_report(USERNAME, PASSWORD, url)
-    print(f"Downloaded {name} to {path}")
-    report_paths.append(path)
+downloaded_files = []
 
-# Build the email body
-email_body = """Hello,
+for name, url in REPORTS.items():
+    print(f"\nDownloading {name}...")
+    try:
+        file_path = download_report(USERNAME, PASSWORD, url)
+        downloaded_files.append(file_path)
+    except Exception as e:
+        print(f"⚠️ Failed to download {name}: {e}")
+        continue
 
-Attached are today's four DSD reports:
+# ✅ Verify at least one file downloaded
+if not downloaded_files:
+    print("❌ No reports downloaded. Exiting.")
+    sys.exit(1)
 
-1. Sales Summary  
-2. Brand Performance  
-3. Store-Level Trends  
-4. Distribution Report  
+print("\n✅ All available reports downloaded:")
+for f in downloaded_files:
+    print(f" - {f}")
 
-Best regards,  
-Bogmayer Automated System
-"""
+# ✅ Send the email with all downloaded reports attached
+try:
+    print("\nSending email with attachments...")
+    send_email_with_attachments(
+        sender=EMAIL_SENDER,
+        recipient=EMAIL_RECIPIENT,
+        token=EMAIL_TOKEN,
+        subject="Automated DSD Reports",
+        body="Attached are the latest DSD reports from the automated system.",
+        attachments=downloaded_files
+    )
+    print("✅ Email sent successfully.")
+except Exception as e:
+    print(f"❌ Failed to send email: {e}")
+    sys.exit(1)
 
-# Send one email with all 4 attachments
-send_email_with_attachments(
-    service=service,
-    sender=os.environ["GMAIL_ADDRESS"],
-    to="jackson@bogmayer.com",
-    subject="Daily DSD Reports",
-    attachment_paths=report_paths,
-    body=email_body
-)
-
-print("Email sent with 4 DSD reports!")
+print("\n🎉 Workflow completed successfully.")
