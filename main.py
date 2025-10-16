@@ -37,7 +37,8 @@ to_header = ", ".join(GMAIL_RECIPIENTS)
 
 # Send email with all downloaded reports attached
 subject = "Automated DSD Reports"
-body = "Hi,\n\nAttached are the latest DSD reports.\n\nBest regards,\nAutomated Report Bot"
+body = "This is an automated email test,\n\nAttached are the latest DSD reports. I need to rename them after I download them so that are more descriptive. These are all live inventory snapshots of:\n\n"
+        "1.SCP/KW in SC \n\n 2. SCP in GA \n\n 3.Tryon \n\n 4. Cavalier "
 
 try:
     send_email_with_attachments(
