@@ -16,8 +16,8 @@ def download_report(username, password, url):
     """
     Logs into DSDLink, downloads a specific report, and renames it.
     """
+    os.makedirs(DOWNLOAD_DIR, exist_ok=True)  #  ensure folder exists
 
-    # Setup Selenium
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
@@ -36,12 +36,10 @@ def download_report(username, password, url):
     wait = WebDriverWait(driver, 30)
 
     try:
-        # Step 1 — Go to login page
         print("Opening login page...")
         driver.get("https://dsdlink.com/Login")
-
-        # Wait for either login inputs or dashboard (if already logged in)
         time.sleep(3)
+
         if "Login" in driver.current_url:
             try:
                 username_elem = wait.until(EC.presence_of_element_located((By.ID, "ews-login-username")))
@@ -56,33 +54,49 @@ def download_report(username, password, url):
         else:
             print("Already logged in.")
 
-        # Verify login worked
+        # Check login success
         if "Login" in driver.current_url:
             raise Exception("Login failed — still on login page.")
 
-        # Step 2 — Navigate to the specific report
         print(f"Navigating to report URL: {url}")
         driver.get(url)
         time.sleep(7)
 
-        # Verify page actually loaded the report
         if "Login" in driver.current_url:
             raise Exception("Session expired — redirected back to login page.")
 
-        # Step 3 — Export the report
         print("Locating export button...")
-        export_btn_host = wait.until(EC.presence_of_element_located((By.ID, "ActionButtonExport")))
+        #  Robust search for the export button (some pages use different IDs)
+        export_btn_host = None
+        possible_ids = ["ActionButtonExport", "ActionButtonExport2", "ActionButtonExport3"]
+
+        for pid in possible_ids:
+            try:
+                export_btn_host = driver.find_element(By.ID, pid)
+                break
+            except Exception:
+                continue
+
+        if not export_btn_host:
+            # Try generic shadow DOM query if no element ID found
+            export_btn_host = driver.execute_script("""
+                return document.querySelector('div[id^="ActionButtonExport"]') ||
+                       document.querySelector('dsd-export-button') ||
+                       document.querySelector('[id*="Export"]');
+            """)
+
+        if not export_btn_host:
+            raise Exception("Could not find export button on page")
+
         export_btn_root = driver.execute_script("return arguments[0].shadowRoot", export_btn_host)
         download_btn = export_btn_root.find_element(By.CSS_SELECTOR, "button.button")
         download_btn.click()
 
-        # Step 4 — Click CSV option
         csv_option = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, '.ews-menu-item[format="CSV"]')))
         csv_option.click()
         print("CSV export clicked.")
         time.sleep(15)
 
-        # Step 5 — Rename the most recent CSV file
         csv_files = [f for f in os.listdir(DOWNLOAD_DIR) if f.endswith(".csv")]
         if not csv_files:
             raise Exception(f"No CSV downloaded for {url}")
@@ -97,15 +111,16 @@ def download_report(username, password, url):
         new_filename = f"Report_{report_id}_{date_str}.csv"
         new_filepath = os.path.join(DOWNLOAD_DIR, new_filename)
         os.rename(latest_file, new_filepath)
-        print(f"Saved as {new_filename}")
+        print(f" Saved as {new_filename}")
 
         return new_filepath
 
     except Exception as e:
         debug_path = os.path.join(DOWNLOAD_DIR, "debug_page.html")
+        os.makedirs(os.path.dirname(debug_path), exist_ok=True)
         with open(debug_path, "w", encoding="utf-8") as f:
             f.write(driver.page_source)
-        print(f"Saved page source to {debug_path} for debugging.")
+        print(f" Saved page source to {debug_path} for debugging.")
         raise e
 
     finally:
