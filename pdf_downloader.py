@@ -1,31 +1,32 @@
 import os
 import time
-import requests
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 def download_report_pdf(username, password, report_url, report_number=1):
     print(f"Downloading report #{report_number} from {report_url}...")
 
-    # Create output directory
+    # Directory to save PDFs
     download_dir = os.path.abspath("AutomatedEmailData")
     os.makedirs(download_dir, exist_ok=True)
-    pdf_path = os.path.join(download_dir, f"Report_{time.strftime('%Y-%m-%d')}_{report_number}.pdf")
 
-    # Set up Selenium
+    # Chrome options
     chrome_options = Options()
-    chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--kiosk-printing")  # Automatically selects Print to PDF
+    # Optional: set a custom profile if needed
+    # chrome_options.add_argument("--user-data-dir=/path/to/chrome/profile")
 
+    # Start Chrome (non-headless)
     driver = webdriver.Chrome(options=chrome_options)
 
     try:
-        # Step 1: Log in
+        # Step 1: Login
         driver.get("https://dsdlink.com/Login")
         WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.ID, "Username"))).send_keys(username)
         driver.find_element(By.ID, "Password").send_keys(password)
@@ -33,37 +34,20 @@ def download_report_pdf(username, password, report_url, report_number=1):
         WebDriverWait(driver, 30).until(EC.url_contains("Home"))
         print("Logged in successfully.")
 
-        # Step 2: Navigate to report page
+        # Step 2: Navigate to report
         driver.get(report_url)
-        time.sleep(5)  # wait for the page to load
+        print("Waiting for report to load...")
+        time.sleep(10)  # Wait for the iframe and content to fully render
 
-        # Step 3: Get cookies from Selenium session
-        session_cookies = driver.get_cookies()
-        cookies_dict = {cookie['name']: cookie['value'] for cookie in session_cookies}
+        # Step 3: Trigger print dialog and save as PDF
+        # Chrome headless cannot use printToPDF here, so we rely on kiosk-printing mode
+        pdf_path = os.path.join(download_dir, f"Report_{time.strftime('%Y-%m-%d')}_{report_number}.pdf")
+        driver.execute_script('window.print();')
+        print(f"PDF should be saved automatically in Chrome default download folder: {pdf_path}")
 
-        # Step 4: Find PDF URL (network request)
-        # For DSDLink, the print button usually triggers a URL like:
-        # https://dsdlink.com/Report/Print?ReportID=XXXXX&Format=PDF
-        # We'll construct it from the ReportID in the URL
-        import urllib.parse as urlparse
-        parsed = urlparse.urlparse(report_url)
-        params = urlparse.parse_qs(parsed.query)
-        report_id = params.get("ReportID", [None])[0]
-        if not report_id:
-            raise Exception("Could not find ReportID in URL")
+        # NOTE: You might need to manually move it from default downloads folder
+        # or configure Chrome profile to automatically save PDFs to `download_dir`
 
-        pdf_url = f"https://dsdlink.com/Report/Print?ReportID={report_id}&Format=PDF"
-
-        # Step 5: Download PDF using requests with cookies
-        response = requests.get(pdf_url, cookies=cookies_dict, stream=True)
-        if response.status_code != 200:
-            raise Exception(f"Failed to download PDF, status code {response.status_code}")
-
-        with open(pdf_path, "wb") as f:
-            for chunk in response.iter_content(1024):
-                f.write(chunk)
-
-        print(f"PDF saved: {pdf_path}")
         return pdf_path
 
     except Exception as e:
@@ -71,5 +55,6 @@ def download_report_pdf(username, password, report_url, report_number=1):
         return None
 
     finally:
+        # Keep Chrome open for manual inspection if needed
+        time.sleep(5)
         driver.quit()
-
