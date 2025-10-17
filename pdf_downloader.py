@@ -1,73 +1,61 @@
 import os
 import time
-from datetime import datetime
+import base64
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
-import base64
 
-DOWNLOAD_DIR = os.path.join(os.getcwd(), "AutomatedEmailData")
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-def download_report_pdf(username, password, report_url, filename="Report.pdf"):
-    """
-    Logs into DSDLink, navigates to the given report URL,
-    generates a PDF using Chrome DevTools, and saves it locally.
-    """
+def download_report_pdf(username, password, report_url, report_number=1):
+    print("Opening login page...")
 
+    # Configure Chrome for PDF output
     chrome_options = Options()
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
 
-    # Enable printing to PDF in headless mode
-    chrome_options.add_argument("--kiosk-printing")
-
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-    wait = WebDriverWait(driver, 30)
+    driver = webdriver.Chrome(options=chrome_options)
 
     try:
-        print("Opening login page...")
-        driver.get("https://dsdlink.com/Home?DashboardID=185125")
-        time.sleep(3)
+        # Login
+        driver.get("https://dsdlink.com/Login")
+        WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.ID, "Username"))).send_keys(username)
+        driver.find_element(By.ID, "Password").send_keys(password)
+        driver.find_element(By.ID, "loginBtn").click()
 
-        try:
-            # Try to log in (if not already logged in)
-            username_elem = wait.until(EC.presence_of_element_located((By.ID, "ews-login-username")))
-            password_elem = wait.until(EC.presence_of_element_located((By.ID, "ews-login-password")))
-            username_elem.send_keys(username)
-            password_elem.send_keys(password, Keys.RETURN)
-            print("Logged in successfully.")
-            time.sleep(5)
-        except:
-            print("Already logged in or login not required.")
+        WebDriverWait(driver, 30).until(EC.url_contains("Home"))
+        print("Logged in successfully.")
 
-        # Navigate to the specific report
+        # Navigate to report
         print(f"Navigating to report URL: {report_url}")
         driver.get(report_url)
-        time.sleep(5)
 
-        # Wait for the export button to confirm page loaded
-        wait.until(EC.presence_of_element_located((By.ID, "ActionButtonExport")))
+        # Wait for report to load
+        WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.XPATH, "//div[contains(text(), 'Print (PDF)')]"))
+        )
         print("Page ready. Generating PDF...")
 
-        # Use Chrome DevTools Protocol to generate PDF
-        pdf_data = driver.execute_cdp_cmd("Page.printToPDF", {
+        # Create output directory
+        output_dir = "AutomatedEmailData"
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Generate file path
+        pdf_path = os.path.join(output_dir, f"Report_{time.strftime('%Y-%m-%d')}_{str(report_number)}.pdf")
+
+        # Use Chrome DevTools Protocol to save page as PDF
+        result = driver.execute_cdp_cmd("Page.printToPDF", {
             "printBackground": True,
             "landscape": False
         })
 
-        # Decode Base64 and save the PDF file
-        pdf_bytes = base64.b64decode(pdf_data['data'])
-        pdf_path = os.path.join(DOWNLOAD_DIR, filename)
+        # Decode base64 and write to file
         with open(pdf_path, "wb") as f:
-            f.write(pdf_bytes)
+            f.write(base64.b64decode(result['data']))
 
         print(f"PDF saved to: {pdf_path}")
         return pdf_path
@@ -75,6 +63,6 @@ def download_report_pdf(username, password, report_url, filename="Report.pdf"):
     except Exception as e:
         print(f"Failed to download PDF: {e}")
         return None
-
     finally:
         driver.quit()
+
