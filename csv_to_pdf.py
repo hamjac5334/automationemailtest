@@ -54,7 +54,7 @@ def csv_to_pdf(csv_path):
 
     # Define table style
     style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#333333")),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#d9d9d9")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
