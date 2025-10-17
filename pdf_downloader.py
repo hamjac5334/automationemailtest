@@ -1,81 +1,67 @@
 import os
 import time
-import base64
-import json
 import requests
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 def download_report_pdf(username, password, report_url, report_number=1):
     print(f"Downloading report #{report_number} from {report_url}...")
 
+    # Create output directory
     download_dir = os.path.abspath("AutomatedEmailData")
     os.makedirs(download_dir, exist_ok=True)
+    pdf_path = os.path.join(download_dir, f"Report_{time.strftime('%Y-%m-%d')}_{report_number}.pdf")
 
+    # Set up Selenium
     chrome_options = Options()
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
 
     driver = webdriver.Chrome(options=chrome_options)
 
     try:
-        # Step 1: Login
+        # Step 1: Log in
         driver.get("https://dsdlink.com/Login")
-        WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.ID, "Username"))
-        ).send_keys(username)
+        WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.ID, "Username"))).send_keys(username)
         driver.find_element(By.ID, "Password").send_keys(password)
         driver.find_element(By.ID, "loginBtn").click()
         WebDriverWait(driver, 30).until(EC.url_contains("Home"))
         print("Logged in successfully.")
 
-        # Step 2: Navigate to report
+        # Step 2: Navigate to report page
         driver.get(report_url)
-        print("Waiting for report iframe or content to load...")
-        time.sleep(5)
+        time.sleep(5)  # wait for the page to load
 
-        # Step 3: Get cookies to replicate session
-        cookies = driver.get_cookies()
-        session = requests.Session()
-        for c in cookies:
-            session.cookies.set(c['name'], c['value'])
+        # Step 3: Get cookies from Selenium session
+        session_cookies = driver.get_cookies()
+        cookies_dict = {cookie['name']: cookie['value'] for cookie in session_cookies}
 
-        # Step 4: Intercept network requests to find PDF
-        logs = driver.execute_cdp_cmd("Network.enable", {})
-        driver.execute_cdp_cmd("Network.clearBrowserCache", {})
+        # Step 4: Find PDF URL (network request)
+        # For DSDLink, the print button usually triggers a URL like:
+        # https://dsdlink.com/Report/Print?ReportID=XXXXX&Format=PDF
+        # We'll construct it from the ReportID in the URL
+        import urllib.parse as urlparse
+        parsed = urlparse.urlparse(report_url)
+        params = urlparse.parse_qs(parsed.query)
+        report_id = params.get("ReportID", [None])[0]
+        if not report_id:
+            raise Exception("Could not find ReportID in URL")
 
-        pdf_url = None
-        # Wait and check network requests for PDF
-        for _ in range(10):
-            events = driver.execute_cdp_cmd("Network.getResponseBody", {})
-            # Actually, simpler: check page for links ending in PDF
-            links = driver.find_elements(By.TAG_NAME, "a")
-            for link in links:
-                href = link.get_attribute("href")
-                if href and ".pdf" in href.lower():
-                    pdf_url = href
-                    break
-            if pdf_url:
-                break
-            time.sleep(1)
+        pdf_url = f"https://dsdlink.com/Report/Print?ReportID={report_id}&Format=PDF"
 
-        if not pdf_url:
-            raise Exception("Could not find PDF link in report page.")
-
-        # Step 5: Download PDF with requests
-        response = session.get(pdf_url)
+        # Step 5: Download PDF using requests with cookies
+        response = requests.get(pdf_url, cookies=cookies_dict, stream=True)
         if response.status_code != 200:
-            raise Exception(f"Failed to download PDF from {pdf_url}")
+            raise Exception(f"Failed to download PDF, status code {response.status_code}")
 
-        pdf_path = os.path.join(download_dir, f"Report_{time.strftime('%Y-%m-%d')}_{report_number}.pdf")
         with open(pdf_path, "wb") as f:
-            f.write(response.content)
+            for chunk in response.iter_content(1024):
+                f.write(chunk)
 
         print(f"PDF saved: {pdf_path}")
         return pdf_path
@@ -86,3 +72,4 @@ def download_report_pdf(username, password, report_url, report_number=1):
 
     finally:
         driver.quit()
+
