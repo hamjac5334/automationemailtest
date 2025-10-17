@@ -1,5 +1,7 @@
 import os
 import time
+import base64
+import tempfile
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -9,20 +11,19 @@ from selenium.webdriver.support import expected_conditions as EC
 def download_report_pdf(username, password, report_url, report_number=1):
     print(f"Downloading report #{report_number} from {report_url}...")
 
-    # Directory to save PDFs
     download_dir = os.path.abspath("AutomatedEmailData")
     os.makedirs(download_dir, exist_ok=True)
 
-    # Chrome options
+    # Create a temporary user data directory
+    temp_profile = tempfile.mkdtemp()
+
     chrome_options = Options()
+    chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--kiosk-printing")  # Automatically selects Print to PDF
-    # Optional: set a custom profile if needed
-    # chrome_options.add_argument("--user-data-dir=/path/to/chrome/profile")
+    chrome_options.add_argument(f"--user-data-dir={temp_profile}")  # <-- unique profile
 
-    # Start Chrome (non-headless)
     driver = webdriver.Chrome(options=chrome_options)
 
     try:
@@ -36,18 +37,29 @@ def download_report_pdf(username, password, report_url, report_number=1):
 
         # Step 2: Navigate to report
         driver.get(report_url)
-        print("Waiting for report to load...")
-        time.sleep(10)  # Wait for the iframe and content to fully render
+        print("Waiting for report iframe to load...")
+        time.sleep(5)
 
-        # Step 3: Trigger print dialog and save as PDF
-        # Chrome headless cannot use printToPDF here, so we rely on kiosk-printing mode
+        iframe = WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.TAG_NAME, "iframe"))
+        )
+        driver.switch_to.frame(iframe)
+        WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body")))
+        time.sleep(5)
+
+        # Step 3: Use CDP print command to get PDF
+        pdf_data = driver.execute_cdp_cmd("Page.printToPDF", {
+            "printBackground": True,
+            "landscape": False
+        })
+
+        pdf_bytes = base64.b64decode(pdf_data['data'])
         pdf_path = os.path.join(download_dir, f"Report_{time.strftime('%Y-%m-%d')}_{report_number}.pdf")
-        driver.execute_script('window.print();')
-        print(f"PDF should be saved automatically in Chrome default download folder: {pdf_path}")
 
-        # NOTE: You might need to manually move it from default downloads folder
-        # or configure Chrome profile to automatically save PDFs to `download_dir`
+        with open(pdf_path, "wb") as f:
+            f.write(pdf_bytes)
 
+        print(f"PDF saved: {pdf_path}")
         return pdf_path
 
     except Exception as e:
@@ -55,6 +67,9 @@ def download_report_pdf(username, password, report_url, report_number=1):
         return None
 
     finally:
-        # Keep Chrome open for manual inspection if needed
-        time.sleep(5)
         driver.quit()
+        # Cleanup temporary profile
+        try:
+            os.rmdir(temp_profile)
+        except OSError:
+            pass
