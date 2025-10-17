@@ -6,7 +6,8 @@ from csv_to_pdf import csv_to_pdf  # <-- NEW import
 USERNAME = os.environ.get("DSD_USERNAME")
 PASSWORD = os.environ.get("DSD_PASSWORD")
 GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
-GMAIL_RECIPIENTS = ["jackson@bogmayer.com"]
+#,"mason.holland@hollandplace.net", "chad.elkins@tapsandtables.net"
+GMAIL_RECIPIENTS = ["jackson@bogmayer.com","mason.holland@hollandplace.net","chad.elkins@tapsandtables.net"]
 
 REPORTS = [
     ("Sales Summary", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972383"),
