@@ -1,4 +1,3 @@
-# csv_to_pdf.py
 import os
 import pandas as pd
 from reportlab.lib import colors
@@ -7,7 +6,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 
 def csv_to_pdf(csv_path):
     """
-    Converts a CSV file to a PDF table and saves it in the same directory.
+    Converts a CSV file to a PDF table and scales it so all columns fit on one page.
     Returns the path to the generated PDF.
     """
     df = pd.read_csv(csv_path)
@@ -18,15 +17,22 @@ def csv_to_pdf(csv_path):
     data = [df.columns.tolist()] + df.values.tolist()
 
     pdf_path = csv_path.replace(".csv", ".pdf")
+    page_width, page_height = landscape(letter)
     pdf = SimpleDocTemplate(pdf_path, pagesize=landscape(letter))
 
-    # --- Auto-adjust column widths ---
+    # Estimate base column widths proportional to content
     col_widths = []
     for col in df.columns:
         max_len = max(df[col].astype(str).map(len).max(), len(col))
-        # Scale width proportional to length, but keep within a reasonable range
-        width = max(60, min(max_len * 7, 200))
-        col_widths.append(width)
+        col_widths.append(max_len * 6)  # rough text width estimate
+
+    total_table_width = sum(col_widths)
+    available_width = page_width - 80  # leave margins
+
+    # Scale down all columns proportionally if the table is too wide
+    if total_table_width > available_width:
+        scale_factor = available_width / total_table_width
+        col_widths = [w * scale_factor for w in col_widths]
 
     table = Table(data, repeatRows=1, colWidths=col_widths)
 
@@ -36,7 +42,7 @@ def csv_to_pdf(csv_path):
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('FONTSIZE', (0, 0), (-1, -1), 7),  # slightly smaller font for 8 columns
         ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.lightgrey]),
     ])
     table.setStyle(style)
@@ -45,4 +51,5 @@ def csv_to_pdf(csv_path):
 
     print(f"Converted {os.path.basename(csv_path)} → {os.path.basename(pdf_path)}")
     return pdf_path
+
 
