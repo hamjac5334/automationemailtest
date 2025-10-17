@@ -3,6 +3,9 @@ import os
 from dsd_downloader import download_report
 from gmail_utils import send_email_with_attachments
 
+#keep this all the time, no harm
+from pdf_downloader import download_report_pdf
+
 # Credentials from GitHub secrets or environment variables
 USERNAME = os.environ.get("DSD_USERNAME")
 PASSWORD = os.environ.get("DSD_PASSWORD")
@@ -18,7 +21,9 @@ REPORTS = [
     ("Retail Sales", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972365")
 ]
 
-# Download reports
+# Download csv reports
+
+"""
 downloaded_files = []
 print("Downloading reports...\n")
 for i, (report_name, url) in enumerate(REPORTS, start=1):
@@ -32,6 +37,15 @@ for i, (report_name, url) in enumerate(REPORTS, start=1):
 if not downloaded_files:
     print(" No reports downloaded. Exiting.")
     exit(1)
+"""
+
+#download pdf reports
+downloaded_files = []
+for i, (report_name, url) in enumerate(REPORTS, start=1):
+    print(f"Downloading {report_name} as PDF...")
+    path = download_report_pdf(USERNAME, PASSWORD, url, i)
+    if path:
+        downloaded_files.append(path)
 
 #adjussts recipients
 to_header = ", ".join(GMAIL_RECIPIENTS)
