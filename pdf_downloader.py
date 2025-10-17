@@ -11,7 +11,6 @@ from selenium.webdriver.support import expected_conditions as EC
 def download_report_pdf(username, password, report_url, report_number=1):
     print(f"Downloading report #{report_number} from {report_url}...")
 
-    # Configure Chrome for saving PDFs
     download_dir = os.path.abspath("AutomatedEmailData")
     os.makedirs(download_dir, exist_ok=True)
 
@@ -20,14 +19,6 @@ def download_report_pdf(username, password, report_url, report_number=1):
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-
-    # Enable saving PDFs automatically
-    prefs = {
-        "printing.print_preview_sticky_settings.appState": '{"recentDestinations": [{"id": "Save as PDF","origin": "local"}],"selectedDestinationId": "Save as PDF","version": 2}',
-        "savefile.default_directory": download_dir
-    }
-    chrome_options.add_experimental_option("prefs", prefs)
-    chrome_options.add_argument("--kiosk-printing")
 
     driver = webdriver.Chrome(options=chrome_options)
 
@@ -38,31 +29,40 @@ def download_report_pdf(username, password, report_url, report_number=1):
         driver.find_element(By.ID, "Password").send_keys(password)
         driver.find_element(By.ID, "loginBtn").click()
         WebDriverWait(driver, 30).until(EC.url_contains("Home"))
-        print("✅ Logged in successfully.")
+        print("Logged in successfully.")
 
         # Step 2: Navigate to report
         driver.get(report_url)
-        WebDriverWait(driver, 40).until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-        time.sleep(5)  # Let dynamic content load
+        print("Waiting for report iframe to load...")
+        time.sleep(5)
 
-        # Step 3: Save the page as PDF
+        # Wait for iframe and switch into it
+        iframe = WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.TAG_NAME, "iframe"))
+        )
+        driver.switch_to.frame(iframe)
+
+        # Wait for report content to appear
+        WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "body"))
+        )
+        time.sleep(5)
+        print("Report content loaded. Generating PDF...")
+
+        # Step 3: Use CDP print command now that correct frame is active
+        pdf_data = driver.execute_cdp_cmd("Page.printToPDF", {
+            "printBackground": True,
+            "landscape": False
+        })
+
+        pdf_bytes = base64.b64decode(pdf_data['data'])
         pdf_path = os.path.join(download_dir, f"Report_{time.strftime('%Y-%m-%d')}_{report_number}.pdf")
 
-        driver.execute_script("window.print();")
-        time.sleep(3)  # Allow print-to-PDF to complete
+        with open(pdf_path, "wb") as f:
+            f.write(pdf_bytes)
 
-        # Wait for file to appear
-        timeout = 20
-        for _ in range(timeout):
-            files = [f for f in os.listdir(download_dir) if f.endswith(".pdf")]
-            if files:
-                latest_pdf = max([os.path.join(download_dir, f) for f in files], key=os.path.getctime)
-                os.rename(latest_pdf, pdf_path)
-                print(f"PDF saved as: {pdf_path}")
-                return pdf_path
-            time.sleep(1)
-
-        raise Exception("Timed out waiting for PDF to be saved.")
+        print(f"PDF saved: {pdf_path}")
+        return pdf_path
 
     except Exception as e:
         print(f"Failed to download PDF: {e}")
