@@ -3,7 +3,7 @@ import pandas as pd
 
 DOWNLOAD_DIR = os.path.join(os.getcwd(), "AutomatedEmailData")
 
-def add_store_value_counts(csv_path, distributor_col='Distributor', product_col='Product Name', store_col='Location'):
+def add_store_value_counts(csv_path, distributor_col='Distributor Location', product_col='Product Name', store_col='Retailer', store_id='Distributor Retailer ID', case_sum='Cases Sum'):
     """
     Reads the CSV at csv_path, calculates the number of unique stores per product per distributor,
     and returns the augmented DataFrame with a new 'StoreCount' column.
