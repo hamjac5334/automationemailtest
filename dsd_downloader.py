@@ -57,10 +57,27 @@ def download_report(username, password, url, report_number=1):
 
         # Export CSV
         print("Locating export button...")
+
+        # Wait for overlays/popups to disappear (FusionHTML is a common one on this site)
+        try:
+            wait.until(EC.invisibility_of_element_located((By.ID, "FusionHTML")))
+            print("FusionHTML overlay is gone.")
+        except Exception:
+            print("FusionHTML overlay did not appear or is already gone.")
+
+        # Locate the export button as before
         export_btn_host = wait.until(EC.presence_of_element_located((By.ID, "ActionButtonExport")))
         export_btn_root = driver.execute_script("return arguments[0].shadowRoot", export_btn_host)
         download_btn = export_btn_root.find_element(By.CSS_SELECTOR, "button.button")
-        download_btn.click()
+
+        try:
+            download_btn.click()
+        except Exception:
+            # If click fails, try using JavaScript
+            print("Standard click failed, trying JavaScript click.")
+            driver.execute_script("arguments[0].scrollIntoView(true);", download_btn)
+            time.sleep(1)
+            driver.execute_script("arguments[0].click();", download_btn)
 
         csv_option = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, '.ews-menu-item[format="CSV"]')))
         csv_option.click()
@@ -84,5 +101,3 @@ def download_report(username, password, url, report_number=1):
     print(f"Report saved to: {new_filepath}")
 
     return new_filepath
-
-
