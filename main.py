@@ -13,7 +13,8 @@ REPORTS = [
     ("Sales Summary", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972383"),
     ("Brand Performance", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972382"),
     ("Weekly Volume", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972378"),
-    ("Retail Sales", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972365")
+    ("Retail Sales", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972365"),
+    ("values", "https://dsdlink.com/Home?DashboardID=100120&ReportID=23124246")
 ]
 
 print("Downloading reports...\n")
@@ -30,7 +31,7 @@ if not downloaded_files:
     print(" No reports downloaded. Exiting.")
     exit(1)
 
-# ✅ Convert CSVs → PDFs
+# PDF conversion
 pdf_files = []
 for csv_path in downloaded_files:
     try:
