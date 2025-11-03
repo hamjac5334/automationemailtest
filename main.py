@@ -1,7 +1,7 @@
 import os
 from dsd_downloader import download_report
 from gmail_utils import send_email_with_attachments
-from csv_to_pdf import csv_to_pdf  
+from csv_to_pdf import csv_to_pdf, set_storecounts_path
 import storecounts
 
 USERNAME = os.environ.get("DSD_USERNAME")
@@ -32,19 +32,18 @@ if not downloaded_files:
     print(" No reports downloaded. Exiting.")
     exit(1)
 
-try:
-    last_csv = storecounts.load_last_report()
-    print(f"Running store counts on: {last_csv}")
-    storecounts_df = storecounts.add_store_value_counts(last_csv)
-    output_path = last_csv.replace(".csv", "_with_storecounts.csv")
-    storecounts_df.to_csv(output_path, index=False)
-    print(f"Store counts file saved to: {output_path}")
-except Exception as e:
-    print(f"Failed running store counts: {e}")
+# Generate storecounts from last report (report 5)
+last_csv = storecounts.load_last_report()
+storecounts_df = storecounts.add_store_value_counts(last_csv)
+storecounts_path = last_csv.replace(".csv", "_with_storecounts.csv")
+storecounts_df.to_csv(storecounts_path, index=False)
+
+# Tell csv_to_pdf where the storecounts file is
+set_storecounts_path(storecounts_path)
 
 # PDF conversion
 pdf_files = []
-for csv_path in downloaded_files:
+for csv_path in downloaded_files[:4]:
     try:
         pdf_path = csv_to_pdf(csv_path)
         pdf_files.append(pdf_path)
