@@ -9,11 +9,35 @@ def csv_to_pdf(csv_path):
     """
     Converts a CSV file to a PDF table, fixing 'Product Name' for total rows,
     scaling to fit all columns, and keeping text neatly wrapped inside each cell.
+
+    Before conversion, merges the corresponding storecounts file to add 'StoreCount' column.
     """
     df = pd.read_csv(csv_path)
 
+    # Attempt to find the matching storecounts file
+    base_path = os.path.splitext(csv_path)[0]
+    storecounts_path = f"{base_path}_with_storecounts.csv"
+
+    if os.path.exists(storecounts_path):
+        storecounts_df = pd.read_csv(storecounts_path)
+
+        # Rename for consistent column name to merge
+        if 'Distributor Location' in storecounts_df.columns:
+            storecounts_df = storecounts_df.rename(columns={'Distributor Location': 'Location'})
+
+        # Merge storecounts into original df
+        if 'Location' in df.columns and 'Product Name' in df.columns and \
+           'Location' in storecounts_df.columns and 'Product Name' in storecounts_df.columns:
+            df = pd.merge(df, storecounts_df[['Location', 'Product Name', 'StoreCount']],
+                          on=['Location', 'Product Name'], how='left')
+        else:
+            print("Required columns for merging store counts not found in one or both DataFrames.")
+
+    else:
+        print(f"No matching storecounts file found for {csv_path}, skipping merge.")
+
     if df.empty:
-        raise ValueError(f"CSV file '{csv_path}' is empty.")
+        raise ValueError(f"CSV file '{csv_path}' is empty after processing.")
 
     if "Location" in df.columns and "Product Name" in df.columns:
         df["Location_shift"] = df["Location"].shift(1)
@@ -25,7 +49,6 @@ def csv_to_pdf(csv_path):
     page_width, page_height = landscape(letter)
     pdf = SimpleDocTemplate(pdf_path, pagesize=landscape(letter))
 
-    # Paragraph style for wrapping text in cells
     cell_style = ParagraphStyle(
         name="TableCell",
         fontName="Helvetica",
@@ -36,29 +59,25 @@ def csv_to_pdf(csv_path):
         spaceBefore=0,
     )
 
-    # Convert all cells to Paragraphs for wrapping
     data = []
     data.append([Paragraph(str(col), cell_style) for col in df.columns])
     for _, row in df.iterrows():
         data.append([Paragraph(str(cell), cell_style) for cell in row])
 
-    # Estimate column widths and scale to fit page
     col_widths = []
     for col in df.columns:
         max_len = max(df[col].astype(str).map(len).max(), len(col))
         col_widths.append(max_len * 6)
 
     total_table_width = sum(col_widths)
-    available_width = page_width - 80  # margins
+    available_width = page_width - 80
 
     if total_table_width > available_width:
         scale_factor = available_width / total_table_width
         col_widths = [w * scale_factor for w in col_widths]
 
-    # Build the table
     table = Table(data, repeatRows=1, colWidths=col_widths)
 
-    # Table styling
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#d9d9d9")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor("#000000")),
@@ -80,6 +99,7 @@ def csv_to_pdf(csv_path):
 
     print(f"Converted {os.path.basename(csv_path)} → {os.path.basename(pdf_path)}")
     return pdf_path
+
 
 
 
