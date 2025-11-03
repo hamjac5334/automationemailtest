@@ -41,18 +41,22 @@ storecounts_df.to_csv(storecounts_path, index=False)
 # Tell csv_to_pdf where the storecounts file is
 set_storecounts_path(storecounts_path)
 
-# PDF conversion
+
+#Pdf conversion
 pdf_files = []
-for csv_path in downloaded_files[:4]:
+for csv_path in downloaded_files[:-1]:  # reports 1-4, excluding last
     try:
         pdf_path = csv_to_pdf(csv_path)
         pdf_files.append(pdf_path)
     except Exception as e:
         print(f"Failed to convert {csv_path} to PDF: {e}")
 
-if not pdf_files:
-    print("No PDFs created. Exiting.")
-    exit(1)
+# Convert and append the storecounts report PDF for emailing
+try:
+    pdf_storecounts = csv_to_pdf(storecounts_path)
+    pdf_files.append(pdf_storecounts)
+except Exception as e:
+    print(f"Failed to convert storecounts CSV to PDF: {e}")
 
 to_header = ", ".join(GMAIL_RECIPIENTS)
 
@@ -61,10 +65,11 @@ body = """This is an automated email test.
 
 Attached are the latest DSD reports as PDFs. 
 These are live inventory snapshots of:
-1. SCP/KW in SC 
+1. SCP/KW in SC
 2. SCP in GA
 3. Tryon
 4. Cavalier
+5. Store Counts Summary
 """
 
 try:
@@ -73,9 +78,9 @@ try:
         to=to_header,
         subject=subject,
         body=body,
-        attachments=pdf_files   # <-- Send PDFs instead of CSVs
+        attachments=pdf_files  # PDFs including the storecounts report now
     )
     print("\nEmail sent successfully.")
 except Exception as e:
-    print(f"\n Failed to send email: {e}")
+    print(f"\nFailed to send email: {e}")
 
