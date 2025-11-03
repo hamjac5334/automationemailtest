@@ -5,36 +5,35 @@ from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 
-def csv_to_pdf(csv_path):
-    """
-    Converts a CSV file to a PDF table, fixing 'Product Name' for total rows,
-    scaling to fit all columns, and keeping text neatly wrapped inside each cell.
+# Update this path to point to report 5 storecounts CSV
+STORECOUNTS_PATH = None  
 
-    Before conversion, merges the corresponding storecounts file to add 'StoreCount' column.
-    """
+_storecounts_df = None
+
+def set_storecounts_path(storecounts_path):
+    global STORECOUNTS_PATH, _storecounts_df
+    STORECOUNTS_PATH = storecounts_path
+    if os.path.exists(storecounts_path):
+        df = pd.read_csv(storecounts_path)
+        if 'Distributor Location' in df.columns:
+            df = df.rename(columns={'Distributor Location':'Location'})
+        _storecounts_df = df[['Location', 'Product Name', 'StoreCount']]
+    else:
+        _storecounts_df = pd.DataFrame(columns=['Location', 'Product Name', 'StoreCount'])
+
+def csv_to_pdf(csv_path):
+    global _storecounts_df
     df = pd.read_csv(csv_path)
 
-    # Attempt to find the matching storecounts file
-    base_path = os.path.splitext(csv_path)[0]
-    storecounts_path = f"{base_path}_with_storecounts.csv"
-
-    if os.path.exists(storecounts_path):
-        storecounts_df = pd.read_csv(storecounts_path)
-
-        # Rename for consistent column name to merge
-        if 'Distributor Location' in storecounts_df.columns:
-            storecounts_df = storecounts_df.rename(columns={'Distributor Location': 'Location'})
-
-        # Merge storecounts into original df
-        if 'Location' in df.columns and 'Product Name' in df.columns and \
-           'Location' in storecounts_df.columns and 'Product Name' in storecounts_df.columns:
-            df = pd.merge(df, storecounts_df[['Location', 'Product Name', 'StoreCount']],
-                          on=['Location', 'Product Name'], how='left')
+    # Only merge if storecounts DataFrame is loaded and not empty
+    if _storecounts_df is not None and not _storecounts_df.empty:
+        # Merge on Location and Product Name
+        if 'Location' in df.columns and 'Product Name' in df.columns:
+            df = pd.merge(df, _storecounts_df, how='left', on=['Location', 'Product Name'])
         else:
-            print("Required columns for merging store counts not found in one or both DataFrames.")
+            print(f"Required columns missing in {os.path.basename(csv_path)}; skipping store counts merge")
 
-    else:
-        print(f"No matching storecounts file found for {csv_path}, skipping merge.")
+    # Existing logic to handle total rows and PDF generation...
 
     if df.empty:
         raise ValueError(f"CSV file '{csv_path}' is empty after processing.")
@@ -49,12 +48,13 @@ def csv_to_pdf(csv_path):
     page_width, page_height = landscape(letter)
     pdf = SimpleDocTemplate(pdf_path, pagesize=landscape(letter))
 
+    # Paragraph style for wrapping text in cells
     cell_style = ParagraphStyle(
         name="TableCell",
         fontName="Helvetica",
         fontSize=7,
         leading=8,
-        alignment=1,  # centered
+        alignment=1,
         spaceAfter=0,
         spaceBefore=0,
     )
@@ -69,11 +69,10 @@ def csv_to_pdf(csv_path):
         max_len = max(df[col].astype(str).map(len).max(), len(col))
         col_widths.append(max_len * 6)
 
-    total_table_width = sum(col_widths)
+    total_width = sum(col_widths)
     available_width = page_width - 80
-
-    if total_table_width > available_width:
-        scale_factor = available_width / total_table_width
+    if total_width > available_width:
+        scale_factor = available_width / total_width
         col_widths = [w * scale_factor for w in col_widths]
 
     table = Table(data, repeatRows=1, colWidths=col_widths)
@@ -99,8 +98,3 @@ def csv_to_pdf(csv_path):
 
     print(f"Converted {os.path.basename(csv_path)} → {os.path.basename(pdf_path)}")
     return pdf_path
-
-
-
-
-
