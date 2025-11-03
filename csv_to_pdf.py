@@ -39,6 +39,8 @@ def csv_to_pdf(csv_path):
             )
             # Drop the redundant column after merge
             df.drop(columns=['Distributor Location'], inplace=True)
+
+            df = df.drop_duplicates()
         else:
             print(f"Required columns missing in {os.path.basename(csv_path)} or storecounts; skipping storecounts merge")
 
