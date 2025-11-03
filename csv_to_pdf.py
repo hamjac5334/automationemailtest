@@ -40,7 +40,7 @@ def csv_to_pdf(csv_path):
             # Drop the redundant column after merge
             df.drop(columns=['Distributor Location'], inplace=True)
 
-            df = df.drop_duplicates()
+            #df = df.drop_duplicates()
         else:
             print(f"Required columns missing in {os.path.basename(csv_path)} or storecounts; skipping storecounts merge")
 
@@ -52,6 +52,8 @@ def csv_to_pdf(csv_path):
         new_location_mask = df["Location"] != df["Location_shift"]
         df.loc[new_location_mask, "Product Name"] = "Total"
         df = df.drop(columns=["Location_shift"])
+
+    df = df.drop_duplicates()
 
     pdf_path = csv_path.replace(".csv", ".pdf")
     page_width, page_height = landscape(letter)
