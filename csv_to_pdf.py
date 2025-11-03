@@ -15,11 +15,11 @@ def set_storecounts_path(storecounts_path):
     STORECOUNTS_PATH = storecounts_path
     if os.path.exists(storecounts_path):
         df = pd.read_csv(storecounts_path)
-        if 'Distributor Location' in df.columns:
-            df = df.rename(columns={'Distributor Location':'Location'})
-        _storecounts_df = df[['Location', 'Product Name', 'StoreCount']]
+        _storecounts_df = df
+        # If the storecounts file uses 'Distributor Location', keep that column
+        # Don't rename here, merge uses right_on explicitly
     else:
-        _storecounts_df = pd.DataFrame(columns=['Location', 'Product Name', 'StoreCount'])
+        _storecounts_df = pd.DataFrame(columns=['Distributor Location', 'Product Name', 'StoreCount'])
 
 def csv_to_pdf(csv_path):
     global _storecounts_df
@@ -27,13 +27,20 @@ def csv_to_pdf(csv_path):
 
     # Only merge if storecounts DataFrame is loaded and not empty
     if _storecounts_df is not None and not _storecounts_df.empty:
-        # Merge on Location and Product Name
-        if 'Location' in df.columns and 'Product Name' in df.columns:
-            df = pd.merge(df, _storecounts_df, how='left', on=['Location', 'Product Name'])
+        if 'Location' in df.columns and 'Product Name' in df.columns and \
+           'Distributor Location' in _storecounts_df.columns and 'Product Name' in _storecounts_df.columns:
+           
+            df = pd.merge(
+                df,
+                _storecounts_df[['Distributor Location', 'Product Name', 'StoreCount']],
+                how='left',
+                left_on=['Location', 'Product Name'],
+                right_on=['Distributor Location', 'Product Name']
+            )
+            # Drop the redundant column after merge
+            df.drop(columns=['Distributor Location'], inplace=True)
         else:
-            print(f"Required columns missing in {os.path.basename(csv_path)}; skipping store counts merge")
-
-    # Existing logic to handle total rows and PDF generation...
+            print(f"Required columns missing in {os.path.basename(csv_path)} or storecounts; skipping storecounts merge")
 
     if df.empty:
         raise ValueError(f"CSV file '{csv_path}' is empty after processing.")
@@ -48,7 +55,6 @@ def csv_to_pdf(csv_path):
     page_width, page_height = landscape(letter)
     pdf = SimpleDocTemplate(pdf_path, pagesize=landscape(letter))
 
-    # Paragraph style for wrapping text in cells
     cell_style = ParagraphStyle(
         name="TableCell",
         fontName="Helvetica",
