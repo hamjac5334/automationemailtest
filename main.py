@@ -34,14 +34,11 @@ if not downloaded_files:
     print(" No reports downloaded. Exiting.")
     exit(1)
 
-# Generate storecounts from last report (report 5)
-last_csv = storecounts.load_last_report()
-storecounts_df = storecounts.add_store_value_counts(last_csv)
-storecounts_path = last_csv.replace(".csv", "_with_storecounts.csv")
-storecounts_df.to_csv(storecounts_path, index=False)
-
-# Tell csv_to_pdf where the storecounts file is
-set_storecounts_path(storecounts_path)
+#new additions
+merged_storecounts_df = storecounts.merge_three_storecounts_reports()
+combined_storecounts_path = os.path.join(storecounts.DOWNLOAD_DIR, "combined_storecounts.csv")
+merged_storecounts_df.to_csv(combined_storecounts_path, index=False)
+set_storecounts_path(combined_storecounts_path)
 
 
 #Pdf conversion
