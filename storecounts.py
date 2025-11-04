@@ -3,48 +3,53 @@ import pandas as pd
 
 DOWNLOAD_DIR = os.path.join(os.getcwd(), "AutomatedEmailData")
 
-def add_store_value_counts(csv_path, distributor_col='Distributor Location', product_col='Product Name', store_col='Retailer', store_id='Distributor Retailer ID', case_sum='Cases Sum'):
-    """
-    Reads the CSV at csv_path, calculates the number of unique stores per product per distributor,
-    and returns the augmented DataFrame with a new 'StoreCount' column.
-    
-    Adjust column names as necessary to match your report's column headers.
-    """
+def add_store_value_counts(csv_path, distributor_col='Distributor Location', product_col='Product Name', store_col='Retailer'):
     df = pd.read_csv(csv_path)
-    
-    # Calculate number of unique stores per distributor and product
     value_counts = df.groupby([distributor_col, product_col])[store_col].nunique().reset_index()
     value_counts.rename(columns={store_col: 'StoreCount'}, inplace=True)
-    
-    # Merge the counts back into the original dataframe
     df = pd.merge(df, value_counts, on=[distributor_col, product_col], how='left')
-    
     return df
 
 def load_last_report():
-    """
-    Finds the most recent CSV report file in the download directory based on modification time
-    and returns its path.
-    """
+    """Assumes last report is newest file in DOWNLOAD_DIR."""
     files = [f for f in os.listdir(DOWNLOAD_DIR) if f.endswith('.csv')]
-    if not files:
-        raise FileNotFoundError("No CSV files found in the downloads directory.")
-    
-    # Full file paths
     full_paths = [os.path.join(DOWNLOAD_DIR, f) for f in files]
-    # Most recently modified file
     last_file = max(full_paths, key=os.path.getmtime)
     return last_file
 
-if __name__ == "__main__":
-    last_csv = load_last_report()
-    print(f"Processing last downloaded CSV report: {last_csv}")
-    
-    # Compute store counts and add column
-    result_df = add_store_value_counts(last_csv)
-    
-    # Optionally save the updated dataframe as a new CSV for further use or inspection
-    output_path = last_csv.replace(".csv", "_with_storecounts.csv")
-    result_df.to_csv(output_path, index=False)
-    print(f"Augmented report saved to: {output_path}")
+def load_specific_report(filename_contains):
+    files = [f for f in os.listdir(DOWNLOAD_DIR) if f.endswith('.csv') and filename_contains in f]
+    full_paths = [os.path.join(DOWNLOAD_DIR, f) for f in files]
+    if not full_paths:
+        raise FileNotFoundError(f"No CSV file containing '{filename_contains}' found")
+    return full_paths[0]
+
+def merge_three_storecounts_reports():
+    # Load and process each storecount CSV
+    csv_30 = load_specific_report("_5.csv")   # original 30 days
+    csv_60 = load_specific_report("_6.csv")   # 60 days
+    csv_90 = load_specific_report("_7.csv")   # 90 days
+
+    df_30 = add_store_value_counts(csv_30)
+    df_60 = add_store_value_counts(csv_60)
+    df_90 = add_store_value_counts(csv_90)
+
+    # Possibly rename StoreCount columns for clarity
+    df_30 = df_30.rename(columns={'StoreCount': 'StoreCount_30days'})
+    df_60 = df_60.rename(columns={'StoreCount': 'StoreCount_60days'})
+    df_90 = df_90.rename(columns={'StoreCount': 'StoreCount_90days'})
+
+    merge_cols = ['Distributor Location', 'Product Name']
+    # Merge 30 and 60 days
+    merged = pd.merge(df_30[merge_cols + ['StoreCount_30days']],
+                      df_60[merge_cols + ['StoreCount_60days']],
+                      how='outer',
+                      on=merge_cols)
+    # Merge result with 90 days
+    merged = pd.merge(merged,
+                      df_90[merge_cols + ['StoreCount_90days']],
+                      how='outer',
+                      on=merge_cols)
+    return merged
+
 
