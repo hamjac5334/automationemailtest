@@ -31,31 +31,34 @@ for i, (report_name, url) in enumerate(REPORTS, start=1):
         print(f" Failed to download {report_name}: {e}")
 
 if not downloaded_files:
-    print(" No reports downloaded. Exiting.")
+    print("No reports downloaded. Exiting.")
     exit(1)
 
-#new additions
+# Merge the three storecounts reports (5th, 6th, 7th)
 merged_storecounts_df = storecounts.merge_three_storecounts_reports()
+
+# Save the merged storecounts CSV
 combined_storecounts_path = os.path.join(storecounts.DOWNLOAD_DIR, "combined_storecounts.csv")
 merged_storecounts_df.to_csv(combined_storecounts_path, index=False)
+
+# Provide the combined storecounts CSV path to csv_to_pdf for merging
 set_storecounts_path(combined_storecounts_path)
 
-
-#Pdf conversion
 pdf_files = []
-for csv_path in downloaded_files[:-1]:  # reports 1-4, excluding last
+# Convert reports 1-4 to PDF using merged storecounts inside
+for csv_path in downloaded_files[:4]:
     try:
         pdf_path = csv_to_pdf(csv_path)
         pdf_files.append(pdf_path)
     except Exception as e:
         print(f"Failed to convert {csv_path} to PDF: {e}")
 
-# Convert and append the storecounts report PDF for emailing
+# Convert and add the combined storecounts report PDF for emailing
 try:
-    pdf_storecounts = csv_to_pdf(storecounts_path)
+    pdf_storecounts = csv_to_pdf(combined_storecounts_path)
     pdf_files.append(pdf_storecounts)
 except Exception as e:
-    print(f"Failed to convert storecounts CSV to PDF: {e}")
+    print(f"Failed to convert combined storecounts CSV to PDF: {e}")
 
 to_header = ", ".join(GMAIL_RECIPIENTS)
 
@@ -68,7 +71,7 @@ These are live inventory snapshots of:
 2. SCP in GA
 3. Tryon
 4. Cavalier
-5. Store Counts Summary
+5. Store Counts Summary (30, 60, and 90 days combined)
 """
 
 try:
@@ -77,9 +80,8 @@ try:
         to=to_header,
         subject=subject,
         body=body,
-        attachments=pdf_files  # PDFs including the storecounts report now
+        attachments=pdf_files
     )
     print("\nEmail sent successfully.")
 except Exception as e:
     print(f"\nFailed to send email: {e}")
-
