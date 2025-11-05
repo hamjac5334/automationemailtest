@@ -45,43 +45,40 @@ merged_storecounts_df.to_csv(combined_storecounts_path, index=False)
 set_storecounts_path(combined_storecounts_path)
 
 pdf_files = []
-# Convert reports 1-4 to PDF using merged storecounts inside
 for csv_path in downloaded_files[:4]:
-    try:
-        pdf_path = csv_to_pdf(csv_path)
-        pdf_files.append(pdf_path)
-    except Exception as e:
-        print(f"Failed to convert {csv_path} to PDF: {e}")
+    pdf_files.append(csv_to_pdf(csv_path))
 
-# Convert and add the combined storecounts report PDF for emailing
+# Convert individual 30, 60, 90 day retailer-level CSVs to PDF separately
 try:
-    pdf_storecounts = csv_to_pdf(combined_storecounts_path)
-    pdf_files.append(pdf_storecounts)
+    # Find these specific storecount files by suffix or name
+    sc30_csv = [f for f in downloaded_files if '23124246' in f][0]
+    sc60_csv = [f for f in downloaded_files if '23153930' in f][0]
+    sc90_csv = [f for f in downloaded_files if '23157734' in f][0]
+
+    pdf_sc30 = csv_to_pdf(sc30_csv)
+    pdf_sc60 = csv_to_pdf(sc60_csv)
+    pdf_sc90 = csv_to_pdf(sc90_csv)
+
+    pdf_files.extend([pdf_sc30, pdf_sc60, pdf_sc90])
 except Exception as e:
-    print(f"Failed to convert combined storecounts CSV to PDF: {e}")
+    print(f"Failed to convert individual storecounts reports to PDF: {e}")
 
-to_header = ", ".join(GMAIL_RECIPIENTS)
+# Now send all PDFs (first four product-level + three retailer-level storecounts)
+send_email_with_attachments(
+    sender=GMAIL_ADDRESS,
+    to=", ".join(GMAIL_RECIPIENTS),
+    subject="Automated DSD Reports",
+    body="""
+    This is an automated email test.
 
-subject = "Automated DSD Reports"
-body = """This is an automated email test.
-
-Attached are the latest DSD reports as PDFs. 
-These are live inventory snapshots of:
-1. SCP/KW in SC
-2. SCP in GA
-3. Tryon
-4. Cavalier
-5. Store Counts Summary (30, 60, and 90 days combined)
-"""
-
-try:
-    send_email_with_attachments(
-        sender=GMAIL_ADDRESS,
-        to=to_header,
-        subject=subject,
-        body=body,
-        attachments=pdf_files
-    )
-    print("\nEmail sent successfully.")
-except Exception as e:
-    print(f"\nFailed to send email: {e}")
+    Attached are the latest DSD reports as PDFs:
+    1. SCP/KW in SC
+    2. SCP in GA
+    3. Tryon
+    4. Cavalier
+    5. Retailers Store Counts 30 Days
+    6. Retailers Store Counts 60 Days
+    7. Retailers Store Counts 90 Days
+    """,
+    attachments=pdf_files
+)
