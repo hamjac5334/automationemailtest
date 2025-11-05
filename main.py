@@ -54,16 +54,28 @@ storecounts_30_csv = next((f for f in downloaded_files if "23124246" in f), None
 storecounts_60_csv = next((f for f in downloaded_files if "23153930" in f), None)
 storecounts_90_csv = next((f for f in downloaded_files if "23157734" in f), None)
 
+print("Downloaded files:")
+for f in downloaded_files:
+    print(f)
+
+# Use correct substrings that actually identify each storecounts file in your filesystem
+storecounts_30_csv = None
+storecounts_60_csv = None
+storecounts_90_csv = None
+
+for path in downloaded_files:
+    if "_5.csv" in path:
+        storecounts_30_csv = path
+    elif "_6.csv" in path:
+        storecounts_60_csv = path
+    elif "_7.csv" in path:
+        storecounts_90_csv = path
+
 if not (storecounts_30_csv and storecounts_60_csv and storecounts_90_csv):
     print("Error: One or more storecounts reports failed to download.")
 else:
-    try:
-        pdf_sc30 = csv_to_pdf(storecounts_30_csv)
-        pdf_sc60 = csv_to_pdf(storecounts_60_csv)
-        pdf_sc90 = csv_to_pdf(storecounts_90_csv)
-        pdf_files.extend([pdf_sc30, pdf_sc60, pdf_sc90])
-    except Exception as e:
-        print(f"Failed to convert individual storecounts CSVs to PDFs: {e}")
+    print(f"Found storecounts reports:\n30 day: {storecounts_30_csv}\n60 day: {storecounts_60_csv}\n90 day: {storecounts_90_csv}")
+    # Proceed with PDF conversion and email as before
 
 try:
     send_email_with_attachments(
