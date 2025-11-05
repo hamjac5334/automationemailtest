@@ -29,20 +29,18 @@ def csv_to_pdf(csv_path):
     if _storecounts_df is not None and not _storecounts_df.empty:
         if 'Location' in df.columns and 'Product Name' in df.columns and \
            'Distributor Location' in _storecounts_df.columns and 'Product Name' in _storecounts_df.columns:
-           
+    
             df = pd.merge(
                 df,
-                _storecounts_df[['Distributor Location', 'Product Name', 'StoreCount']],
+                _storecounts_df[['Distributor Location', 'Product Name', 'StoreCount_30days', 'StoreCount_60days', 'StoreCount_90days']],
                 how='left',
                 left_on=['Location', 'Product Name'],
                 right_on=['Distributor Location', 'Product Name']
             )
-            # Drop the redundant column after merge
             df.drop(columns=['Distributor Location'], inplace=True)
-
-            #df = df.drop_duplicates()
         else:
             print(f"Required columns missing in {os.path.basename(csv_path)} or storecounts; skipping storecounts merge")
+
 
     if df.empty:
         raise ValueError(f"CSV file '{csv_path}' is empty after processing.")
