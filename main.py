@@ -49,19 +49,28 @@ for csv_path in downloaded_files[:4]:
     pdf_files.append(csv_to_pdf(csv_path))
 
 # Convert individual 30, 60, 90 day retailer-level CSVs to PDF separately
-try:
-    # Find these specific storecount files by suffix or name
-    sc30_csv = [f for f in downloaded_files if '23124246' in f][0]
-    sc60_csv = [f for f in downloaded_files if '23153930' in f][0]
-    sc90_csv = [f for f in downloaded_files if '23157734' in f][0]
+storecounts_30_csv = None
+storecounts_60_csv = None
+storecounts_90_csv = None
 
-    pdf_sc30 = csv_to_pdf(sc30_csv)
-    pdf_sc60 = csv_to_pdf(sc60_csv)
-    pdf_sc90 = csv_to_pdf(sc90_csv)
+for path in downloaded_files:
+    if "23124246" in path:
+        storecounts_30_csv = path
+    elif "23153930" in path:
+        storecounts_60_csv = path
+    elif "23157734" in path:
+        storecounts_90_csv = path
 
-    pdf_files.extend([pdf_sc30, pdf_sc60, pdf_sc90])
-except Exception as e:
-    print(f"Failed to convert individual storecounts reports to PDF: {e}")
+if not (storecounts_30_csv and storecounts_60_csv and storecounts_90_csv):
+    print("Error: One or more storecounts reports failed to download.")
+else:
+    try:
+        pdf_sc30 = csv_to_pdf(storecounts_30_csv)
+        pdf_sc60 = csv_to_pdf(storecounts_60_csv)
+        pdf_sc90 = csv_to_pdf(storecounts_90_csv)
+        pdf_files.extend([pdf_sc30, pdf_sc60, pdf_sc90])
+    except Exception as e:
+        print(f"Failed to convert individual storecounts reports to PDF: {e}")
 
 # Now send all PDFs (first four product-level + three retailer-level storecounts)
 send_email_with_attachments(
