@@ -9,6 +9,7 @@ def add_store_value_counts(csv_path, distributor_col='Distributor Location', pro
     value_counts = df.groupby([distributor_col, product_col])[store_col].nunique().reset_index()
     return value_counts
 
+
 def merge_three_storecounts_reports():
     # Assuming downloaded filenames as ..._5.csv, ..._6.csv, ..._7.csv for the 3 time periods
     csv_30 = [f for f in os.listdir(DOWNLOAD_DIR) if f.endswith('_5.csv')][0]
@@ -28,4 +29,16 @@ def merge_three_storecounts_reports():
     merged = pd.merge(df_30, df_60, how='outer', on=merge_cols)
     merged = pd.merge(merged, df_90, how='outer', on=merge_cols)
     return merged
+
+def save_all_retail_stores_list(output_path=None):
+    merged_df = merge_three_storecounts_reports()
+    stores = merged_df['Distributor Location'].dropna().unique()
+    stores_df = pd.DataFrame(stores, columns=['Retail Stores'])
+    
+    # Save to CSV
+    if output_path is None:
+        output_path = os.path.join(DOWNLOAD_DIR, "all_retail_stores.csv")
+    stores_df.to_csv(output_path, index=False)
+    print(f"All retail stores list saved to: {output_path}")
+    return output_path
 
