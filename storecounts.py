@@ -30,15 +30,4 @@ def merge_three_storecounts_reports():
     merged = pd.merge(merged, df_90, how='outer', on=merge_cols)
     return merged
 
-def save_all_retail_stores_list(output_path=None):
-    merged_df = merge_three_storecounts_reports()
-    stores = merged_df['Distributor Location'].dropna().unique()
-    stores_df = pd.DataFrame(stores, columns=['Retail Stores'])
-    
-    # Save to CSV
-    if output_path is None:
-        output_path = os.path.join(DOWNLOAD_DIR, "all_retail_stores.csv")
-    stores_df.to_csv(output_path, index=False)
-    print(f"All retail stores list saved to: {output_path}")
-    return output_path
 
