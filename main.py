@@ -42,8 +42,7 @@ merged_storecounts_df.to_csv(combined_storecounts_path, index=False)
 set_storecounts_path(combined_storecounts_path)
 
 #added this
-all_stores_csv_path = storecounts.save_all_retail_stores_list()
-pdf_all_stores = csv_to_pdf(all_stores_csv_path)
+pdf_all_stores = csv_to_pdf(storecounts_90_csv)
 
 pdf_files = []
 # Convert main product reports (1-4)
