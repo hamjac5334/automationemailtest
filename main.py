@@ -35,12 +35,17 @@ if len(downloaded_files) < len(REPORTS):
 
 # Merge the three storecounts reports (reports 5, 6, 7)
 merged_storecounts_df = storecounts.merge_three_storecounts_reports()
-
 combined_storecounts_path = os.path.join(storecounts.DOWNLOAD_DIR, "combined_storecounts.csv")
 merged_storecounts_df.to_csv(combined_storecounts_path, index=False)
-
 set_storecounts_path(combined_storecounts_path)
 
+# Find storecounts CSVs dynamically by report IDs in paths
+storecounts_30_csv = next((f for f in downloaded_files if "23124246" in f), None)
+storecounts_60_csv = next((f for f in downloaded_files if "23153930" in f), None)
+storecounts_90_csv = next((f for f in downloaded_files if "23157734" in f), None)
+
+if not (storecounts_30_csv and storecounts_60_csv and storecounts_90_csv):
+    print("Error: One or more storecounts reports failed to download.")
 
 pdf_files = []
 # Convert main product reports (1-4)
@@ -50,25 +55,14 @@ for csv_path in downloaded_files[:4]:
     except Exception as e:
         print(f"Failed to convert {csv_path} to PDF: {e}")
 
-# Find storecounts CSVs dynamically by report IDs in paths
-storecounts_30_csv = next((f for f in downloaded_files if "23124246" in f), None)
-storecounts_60_csv = next((f for f in downloaded_files if "23153930" in f), None)
-storecounts_90_csv = next((f for f in downloaded_files if "23157734" in f), None)
-
-if not (storecounts_30_csv and storecounts_60_csv and storecounts_90_csv):
-    print("Error: One or more storecounts reports failed to download.")
-else:
-    try:
-        pdf_sc30 = csv_to_pdf(storecounts_30_csv)
-        pdf_sc60 = csv_to_pdf(storecounts_60_csv)
-        pdf_sc90 = csv_to_pdf(storecounts_90_csv)
-        pdf_files.extend([pdf_sc30, pdf_sc60, pdf_sc90])
-    except Exception as e:
-        print(f"Failed to convert individual storecounts CSVs to PDFs: {e}")
-
-
-#added this
-pdf_files.append(pdf_sc90)
+# Convert individual storecounts CSVs (30, 60, 90 days) PDFs and append if successful
+try:
+    pdf_sc30 = csv_to_pdf(storecounts_30_csv)
+    pdf_sc60 = csv_to_pdf(storecounts_60_csv)
+    pdf_sc90 = csv_to_pdf(storecounts_90_csv)
+    pdf_files.extend([pdf_sc30, pdf_sc60, pdf_sc90])
+except Exception as e:
+    print(f"Failed to convert individual storecounts CSVs to PDFs: {e}")
 
 try:
     send_email_with_attachments(
