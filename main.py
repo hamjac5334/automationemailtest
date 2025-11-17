@@ -41,6 +41,10 @@ merged_storecounts_df.to_csv(combined_storecounts_path, index=False)
 
 set_storecounts_path(combined_storecounts_path)
 
+#added this
+all_stores_csv_path = storecounts.save_all_retail_stores_list()
+pdf_all_stores = csv_to_pdf(all_stores_csv_path)
+
 pdf_files = []
 # Convert main product reports (1-4)
 for csv_path in downloaded_files[:4]:
@@ -65,6 +69,9 @@ else:
     except Exception as e:
         print(f"Failed to convert individual storecounts CSVs to PDFs: {e}")
 
+#added this
+pdf_files.append(pdf_all_stores)
+
 try:
     send_email_with_attachments(
         sender=GMAIL_ADDRESS,
@@ -77,6 +84,7 @@ Attached are the latest DSD reports as PDFs:
 2. SCP in GA
 3. Tryon
 4. Cavalier
+5. List of Retail Stores
 """,
         attachments=pdf_files
     )
