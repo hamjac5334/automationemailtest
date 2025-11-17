@@ -41,8 +41,6 @@ merged_storecounts_df.to_csv(combined_storecounts_path, index=False)
 
 set_storecounts_path(combined_storecounts_path)
 
-#added this
-pdf_all_stores = csv_to_pdf(storecounts_90_csv)
 
 pdf_files = []
 # Convert main product reports (1-4)
@@ -68,8 +66,9 @@ else:
     except Exception as e:
         print(f"Failed to convert individual storecounts CSVs to PDFs: {e}")
 
+
 #added this
-pdf_files.append(pdf_all_stores)
+pdf_files.append(pdf_sc90)
 
 try:
     send_email_with_attachments(
