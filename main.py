@@ -40,9 +40,10 @@ merged_storecounts_df.to_csv(combined_storecounts_path, index=False)
 set_storecounts_path(combined_storecounts_path)
 
 # Find storecounts CSVs dynamically by report IDs in paths
-storecounts_30_csv = next((f for f in downloaded_files if "23124246" in f), None)
-storecounts_60_csv = next((f for f in downloaded_files if "23153930" in f), None)
-storecounts_90_csv = next((f for f in downloaded_files if "23157734" in f), None)
+storecounts_30_csv = next((f for f in downloaded_files if f.endswith('_5.csv')), None)
+storecounts_60_csv = next((f for f in downloaded_files if f.endswith('_6.csv')), None)
+storecounts_90_csv = next((f for f in downloaded_files if f.endswith('_7.csv')), None)
+
 
 if not (storecounts_30_csv and storecounts_60_csv and storecounts_90_csv):
     print("Error: One or more storecounts reports failed to download.")
