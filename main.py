@@ -39,11 +39,10 @@ combined_storecounts_path = os.path.join(storecounts.DOWNLOAD_DIR, "combined_sto
 merged_storecounts_df.to_csv(combined_storecounts_path, index=False)
 set_storecounts_path(combined_storecounts_path)
 
-# Find storecounts CSVs dynamically by report IDs in paths
+# Find storecounts CSVs dynamically by report number suffix
 storecounts_30_csv = next((f for f in downloaded_files if f.endswith('_5.csv')), None)
 storecounts_60_csv = next((f for f in downloaded_files if f.endswith('_6.csv')), None)
 storecounts_90_csv = next((f for f in downloaded_files if f.endswith('_7.csv')), None)
-
 
 if not (storecounts_30_csv and storecounts_60_csv and storecounts_90_csv):
     print("Error: One or more storecounts reports failed to download.")
@@ -56,14 +55,34 @@ for csv_path in downloaded_files[:4]:
     except Exception as e:
         print(f"Failed to convert {csv_path} to PDF: {e}")
 
-# Convert individual storecounts CSVs (30, 60, 90 days) PDFs and append if successful
+# Convert storecounts CSVs 30 and 60 days if files exist
 try:
-    pdf_sc30 = csv_to_pdf(storecounts_30_csv)
-    pdf_sc60 = csv_to_pdf(storecounts_60_csv)
-    pdf_sc90 = csv_to_pdf(storecounts_90_csv)
-    pdf_files.extend([pdf_sc30, pdf_sc60, pdf_sc90])
+    if storecounts_30_csv and os.path.isfile(storecounts_30_csv):
+        pdf_sc30 = csv_to_pdf(storecounts_30_csv)
+    else:
+        pdf_sc30 = None
+    if storecounts_60_csv and os.path.isfile(storecounts_60_csv):
+        pdf_sc60 = csv_to_pdf(storecounts_60_csv)
+    else:
+        pdf_sc60 = None
 except Exception as e:
-    print(f"Failed to convert individual storecounts CSVs to PDFs: {e}")
+    print(f"Failed to convert storecounts 30/60 CSVs to PDFs: {e}")
+    pdf_sc30 = pdf_sc60 = None
+
+# Convert and append storecounts 90 days PDF only if file exists
+try:
+    if storecounts_90_csv and os.path.isfile(storecounts_90_csv):
+        pdf_sc90 = csv_to_pdf(storecounts_90_csv)
+        pdf_files.append(pdf_sc90)  # 5th report
+    else:
+        print("90-day storecounts CSV file missing; skipping its PDF attachment.")
+except Exception as e:
+    print(f"Failed to convert storecounts 90 CSV to PDF: {e}")
+
+# Append available 30 and 60 day PDFs if successfully created
+for pdf in [pdf_sc30, pdf_sc60]:
+    if pdf:
+        pdf_files.append(pdf)
 
 try:
     send_email_with_attachments(
