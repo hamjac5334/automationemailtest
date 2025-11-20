@@ -2,7 +2,6 @@ import os
 from dsd_downloader import download_report
 from gmail_utils import send_email_with_attachments
 from csv_to_pdf import csv_to_pdf, set_storecounts_path
-from auto_run_eda import run_eda_and_download_report
 import storecounts
 
 USERNAME = os.environ.get("DSD_USERNAME")
