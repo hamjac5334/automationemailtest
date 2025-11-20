@@ -8,7 +8,7 @@ USERNAME = os.environ.get("DSD_USERNAME")
 PASSWORD = os.environ.get("DSD_PASSWORD")
 GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
 #,"mason.holland@hollandplace.net", "chad.elkins@tapsandtables.net"
-GMAIL_RECIPIENTS = ["jackson@bogmayer.com","mason.holland@hollandplace.net", "chad.elkins@tapsandtables.net"]
+GMAIL_RECIPIENTS = ["jackson@bogmayer.com"]
 
 REPORTS = [
     ("Sales Summary", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972383"),
@@ -83,6 +83,13 @@ except Exception as e:
 for pdf in [pdf_sc30, pdf_sc60]:
     if pdf:
         pdf_files.append(pdf)
+
+#added this
+dashboard_url = "https://automatedanalytics.onrender.com/"
+target_csv = storecounts_90_csv  # Or whichever CSV you want to analyze
+eda_pdf_path = run_eda_and_download_report(target_csv, dashboard_url, storecounts.DOWNLOAD_DIR)
+pdf_files.append(eda_pdf_path)
+
 
 try:
     send_email_with_attachments(
