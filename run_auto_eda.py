@@ -6,6 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import ElementClickInterceptedException
 from webdriver_manager.chrome import ChromeDriverManager
 
 def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
@@ -29,23 +30,33 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
 
     try:
         driver.get(dashboard_url)
-        
-        #Added this
+
         with open("page_debug.html", "w") as f:
             f.write(driver.page_source)
-            
-        file_input = wait.until(EC.presence_of_element_located((By.ID, "fileInput")))
+
+        # Wait for and upload the CSV file
+        file_input = wait.until(EC.visibility_of_element_located((By.ID, "fileInput")))
         file_input.send_keys(os.path.abspath(input_csv))
 
-        # Click download PDF trigger button when clickable
+        # Wait for trigger button, scroll to it, and try clicking
         download_trigger = wait.until(EC.element_to_be_clickable((By.ID, "download-pdf")))
-        download_trigger.click()
+        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", download_trigger)
+        time.sleep(0.5)  # Give CSS transitions time if any
+        try:
+            download_trigger.click()
+        except ElementClickInterceptedException:
+            driver.execute_script("arguments[0].click();", download_trigger)
 
-        # Wait for the final download button to appear and click it
+        # Wait for final download-analysis-btn, scroll and click
         download_btn = wait.until(EC.element_to_be_clickable((By.ID, "download-analysis-btn")))
-        download_btn.click()
+        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", download_btn)
+        time.sleep(0.5)
+        try:
+            download_btn.click()
+        except ElementClickInterceptedException:
+            driver.execute_script("arguments[0].click();", download_btn)
 
-        # Wait for the new PDF file to appear in download_dir (Implement your existing wait_for_new_pdf or similar logic here)
+        # Wait for the new PDF file to appear in download_dir (reuse your wait logic)
         pdf_file = wait_for_new_pdf(download_dir, timeout=60)
         return pdf_file
 
@@ -53,7 +64,6 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         driver.quit()
 
 def wait_for_new_pdf(download_dir, timeout=60):
-    import time
     start = time.time()
     while True:
         pdfs = [f for f in os.listdir(download_dir) if f.endswith('.pdf')]
