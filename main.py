@@ -88,9 +88,9 @@ if storecounts_90_csv and os.path.isfile(storecounts_90_csv):
 
 # Run EDA only if valid target CSV exists
 dashboard_url = "https://automatedanalytics.onrender.com/"
-if storecounts_90_csv and os.path.isfile(storecounts_90_csv):
+if downloaded_files[1] and os.path.isfile(downloaded_files[1]):
     try:
-        eda_pdf_path = run_eda_and_download_report(storecounts_90_csv, dashboard_url, storecounts.DOWNLOAD_DIR)
+        eda_pdf_path = run_eda_and_download_report(downloaded_files[1], dashboard_url, storecounts.DOWNLOAD_DIR)
         pdf_files.append(eda_pdf_path)
     except Exception as e:
         print(f"Failed to run dashboard analysis: {e}")
