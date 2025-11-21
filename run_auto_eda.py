@@ -25,11 +25,15 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
     options.add_experimental_option("prefs", prefs)
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    wait = WebDriverWait(driver, 30)
+    wait = WebDriverWait(driver, 60)
 
     try:
         driver.get(dashboard_url)
-        # Wait for file input and upload CSV
+        
+        #Added this
+        with open("page_debug.html", "w") as f:
+            f.write(driver.page_source)
+            
         file_input = wait.until(EC.presence_of_element_located((By.ID, "fileInput")))
         file_input.send_keys(os.path.abspath(input_csv))
 
