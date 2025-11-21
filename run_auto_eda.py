@@ -21,9 +21,12 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         return None
 
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless=new")
+    # Uncomment next line to debug with a visible browser (not headless)
+    # options.add_argument("--headless=new")  
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
     user_data_dir = tempfile.mkdtemp()
     options.add_argument(f"--user-data-dir={user_data_dir}")
     prefs = {
@@ -39,28 +42,34 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         driver = webdriver.Chrome(
             service=Service(ChromeDriverManager().install()), options=options
         )
+        driver.set_window_size(1280, 1024)  # Larger window sometimes needed for proper rendering
 
-        # Wait for dashboard to fully load (wait for title)
-        wait_for_title = WebDriverWait(driver, 180)
-        print("[STEP] Waiting for dashboard to finish loading (title must match)...")
+        wait_for_html = WebDriverWait(driver, 120)
+        print("[STEP] Waiting for HTML to contain dashboard branding...")
         driver.get(dashboard_url)
-        try:
-            wait_for_title.until(EC.title_contains("Bogmayer Analytics Dashboard"))
-        except TimeoutException:
-            print("[ERROR] Dashboard never finished loading—still on Render loading page. Cannot proceed.")
+        start_time = time.time()
+        dashboard_ready = False
+        for i in range(120):
+            page_source = driver.page_source
+            if "Bogmayer Analytics Dashboard" in page_source or "Upload Dataset" in page_source:
+                dashboard_ready = True
+                print("[OK] Found dashboard branding in HTML at", i, "seconds.")
+                break
+            time.sleep(1)
+        if not dashboard_ready:
+            print("[ERROR] Dashboard page HTML does NOT contain dashboard branding after 120s, saving debug output.")
             with open("dashboard_title_debug.html", "w") as f:
-                f.write(driver.page_source[:10000])
+                f.write(driver.page_source[:20000])
             return None
-        print("[OK] Dashboard app is fully loaded!")
-
         print("[STEP] Waiting for file input element to be visible...")
-        wait = WebDriverWait(driver, 120)
+        wait = WebDriverWait(driver, 90)
         try:
             file_input = wait.until(EC.visibility_of_element_located((By.ID, "fileInput")))
             print("[OK] File input element found and visible.")
         except (TimeoutException, NoSuchElementException) as e:
             print(f"[ERROR] Could not find dashboard file input: {e!r}")
-            print(driver.page_source[:500])
+            with open("dashboard_fileinput_debug.html", "w") as f:
+                f.write(driver.page_source[:10000])
             return None
 
         print(f"[STEP] Sending file path to dashboard file input: {input_csv}")
@@ -143,3 +152,4 @@ def wait_for_new_pdf(download_dir, timeout=90):
             print("[ERROR] Timed out waiting for PDF download in:", download_dir)
             return None
         time.sleep(2)
+
