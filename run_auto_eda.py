@@ -15,12 +15,10 @@ from selenium.common.exceptions import (
 from webdriver_manager.chrome import ChromeDriverManager
 
 def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
-    # Early check for the input file
     if not input_csv or not os.path.isfile(input_csv):
         print(f"Dashboard analysis skipped: {input_csv!r} is missing or not a valid file.")
         return None
 
-    # Setup browser options/config
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
@@ -42,20 +40,22 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         wait = WebDriverWait(driver, 60)
         print(f"Navigating to dashboard: {dashboard_url}")
         driver.get(dashboard_url)
-        # Optional: Save page source for diagnostics
         with open("page_debug.html", "w") as f:
             f.write(driver.page_source)
 
-        # Upload CSV
+        # Locate the file input directly—do not click the upload button!
         try:
             file_input = wait.until(EC.visibility_of_element_located((By.ID, "fileInput")))
+            # If the input is hidden, unhide it with JS:
+            if not file_input.is_displayed():
+                driver.execute_script("arguments[0].style.display = 'block';", file_input)
             file_input.send_keys(os.path.abspath(input_csv))
-            print("CSV uploaded for analysis.")
+            print("CSV path sent to file input.")
         except (TimeoutException, NoSuchElementException) as e:
-            print(f"Could not find dashboard upload input: {e!r}")
+            print(f"Could not find dashboard file input: {e!r}")
             return None
 
-        # Click main analysis trigger
+        # Continue as before: click download trigger button
         try:
             download_trigger = wait.until(EC.element_to_be_clickable((By.ID, "download-pdf")))
             driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", download_trigger)
