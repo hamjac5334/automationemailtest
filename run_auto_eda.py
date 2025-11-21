@@ -15,8 +15,9 @@ from selenium.common.exceptions import (
 from webdriver_manager.chrome import ChromeDriverManager
 
 def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
+    print("[STEP] Starting EDA automation script.")
     if not input_csv or not os.path.isfile(input_csv):
-        print(f"Dashboard analysis skipped: {input_csv!r} is missing or not a valid file.")
+        print(f"[ERROR] Dashboard analysis skipped: {input_csv!r} is missing or not a valid file.")
         return None
 
     options = webdriver.ChromeOptions()
@@ -34,32 +35,43 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
 
     driver = None
     try:
+        print(f"[STEP] Launching WebDriver and navigating to dashboard: {dashboard_url}")
         driver = webdriver.Chrome(
             service=Service(ChromeDriverManager().install()), options=options
         )
-        wait = WebDriverWait(driver, 120)
-        print(f"Navigating to dashboard: {dashboard_url}")
+
+        # Wait for dashboard to fully load (wait for title)
+        wait_for_title = WebDriverWait(driver, 180)
+        print("[STEP] Waiting for dashboard to finish loading (title must match)...")
         driver.get(dashboard_url)
-        print("Dashboard page title:", driver.title)
-        print("Current URL:", driver.current_url)
+        try:
+            wait_for_title.until(EC.title_contains("Bogmayer Analytics Dashboard"))
+        except TimeoutException:
+            print("[ERROR] Dashboard never finished loading—still on Render loading page. Cannot proceed.")
+            with open("dashboard_title_debug.html", "w") as f:
+                f.write(driver.page_source[:10000])
+            return None
+        print("[OK] Dashboard app is fully loaded!")
 
-        with open("page_debug.html", "w") as f:
-            f.write(driver.page_source[:10000])  # Save diagnostic output
-
-        # Upload CSV file to file input
+        print("[STEP] Waiting for file input element to be visible...")
+        wait = WebDriverWait(driver, 120)
         try:
             file_input = wait.until(EC.visibility_of_element_located((By.ID, "fileInput")))
-            file_input.send_keys(os.path.abspath(input_csv))
-            print("File path successfully sent to dashboard file input.")
+            print("[OK] File input element found and visible.")
         except (TimeoutException, NoSuchElementException) as e:
-            print(f"Could not find dashboard file input: {e!r}")
+            print(f"[ERROR] Could not find dashboard file input: {e!r}")
             print(driver.page_source[:500])
             return None
 
-        # Wait for backend analysis to finish (empirical 13s, padded to 15s)
-        time.sleep(15)
+        print(f"[STEP] Sending file path to dashboard file input: {input_csv}")
+        file_input.send_keys(os.path.abspath(input_csv))
+        print("[OK] File path sent. Dashboard should process/upload the file.")
 
-        # Click dashboard PDF trigger button
+        print("[STEP] Waiting for backend analysis (~15s) to finish...")
+        time.sleep(15)
+        print("[OK] Backend analysis sleep complete; proceeding to report download triggers.")
+
+        print("[STEP] Waiting for dashboard PDF trigger button to be clickable...")
         try:
             download_trigger = WebDriverWait(driver, 90).until(
                 EC.element_to_be_clickable((By.ID, "download-pdf")))
@@ -67,16 +79,17 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
             time.sleep(0.5)
             try:
                 download_trigger.click()
+                print("[OK] Dashboard PDF analysis trigger button clicked.")
             except ElementClickInterceptedException:
                 driver.execute_script("arguments[0].click();", download_trigger)
-            print("Triggered dashboard PDF analysis.")
+                print("[WARN] Intercepted click, used JavaScript to click PDF trigger.")
         except (TimeoutException, NoSuchElementException) as e:
-            print(f"Could not click dashboard analysis trigger: {e!r}")
+            print(f"[ERROR] Could not click dashboard analysis trigger: {e!r}")
             with open("dashboard_analysis_trigger_debug.html", "w") as f:
                 f.write(driver.page_source[:10000])
             return None
 
-        # Wait for report download button presence, then click when clickable
+        print("[STEP] Waiting for final PDF download button to appear and become clickable...")
         try:
             wait_download = WebDriverWait(driver, 120)
             wait_download.until(EC.presence_of_element_located((By.ID, "download-analysis-btn")))
@@ -85,47 +98,48 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
             time.sleep(0.5)
             try:
                 download_btn.click()
+                print("[OK] Final dashboard PDF download button clicked.")
             except ElementClickInterceptedException:
                 driver.execute_script("arguments[0].click();", download_btn)
-            print("Clicked dashboard PDF download button.")
+                print("[WARN] Intercepted click, used JavaScript to click final PDF button.")
         except (TimeoutException, NoSuchElementException) as e:
-            print(f"Could not click dashboard download button: {e!r}")
+            print(f"[ERROR] Could not click dashboard download button: {e!r}")
             with open("dashboard_final_debug.html", "w") as f:
                 f.write(driver.page_source[:10000])
             return None
 
-        # Wait up to 90s for PDF to appear
+        print("[STEP] Waiting for new PDF to appear at:", download_dir)
         pdf_file = wait_for_new_pdf(download_dir, timeout=90)
         if pdf_file:
-            print(f"Downloaded dashboard PDF: {pdf_file}")
+            print(f"[SUCCESS] Downloaded dashboard PDF: {pdf_file}")
             return pdf_file
         else:
-            print("PDF download did not complete or file missing.")
+            print("[ERROR] PDF download did not complete or file missing.")
             return None
 
     except Exception as e:
-        print("Unexpected error in analytics automation:", repr(e))
+        print("[FATAL ERROR] Unexpected error in analytics automation:", repr(e))
         traceback.print_exc()
         if driver is not None:
             with open("dashboard_error.html", "w") as f:
                 f.write(driver.page_source[:10000])
         return None
     finally:
+        print("[STEP] Cleaning up: Quitting WebDriver.")
         if driver is not None:
             driver.quit()
 
 def wait_for_new_pdf(download_dir, timeout=90):
+    print(f"[STEP] Waiting for new PDF in {download_dir} (timeout={timeout}s)...")
     start = time.time()
     while True:
         pdfs = [f for f in os.listdir(download_dir) if f.endswith('.pdf')]
         if pdfs:
             full_path = os.path.join(download_dir, pdfs[0])
             if os.path.getsize(full_path) > 0:
+                print(f"[STEP] Found non-empty PDF: {full_path}")
                 return full_path
         if time.time() - start > timeout:
-            print("Timed out waiting for PDF download in:", download_dir)
+            print("[ERROR] Timed out waiting for PDF download in:", download_dir)
             return None
         time.sleep(2)
-
-
-
