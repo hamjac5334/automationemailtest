@@ -30,7 +30,7 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
     try:
         driver.get(dashboard_url)
         # Wait for file input and upload CSV
-        file_input = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "input[type='file']")))
+        file_input = wait.until(EC.presence_of_element_located((By.ID, "fileInput")))
         file_input.send_keys(os.path.abspath(input_csv))
 
         # Click download PDF trigger button when clickable
