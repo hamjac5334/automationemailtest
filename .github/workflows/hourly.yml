@@ -31,3 +31,10 @@ jobs:
           GMAIL_RECIPIENT: ${{ secrets.GMAIL_RECIPIENT }}
           GMAIL_TOKEN: ${{ secrets.GMAIL_TOKEN }}
         run: python main.py
+
+      - name: Upload debug HTML
+      if: always() # uploads even if previous steps fail
+      uses: actions/upload-artifact@v4
+      with:
+        name: dashboard-debug
+        path: page_debug.html
