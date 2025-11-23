@@ -70,7 +70,6 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    # If your runner supports it:
     prefs = {
         "download.default_directory": os.path.abspath(download_dir),
         "download.prompt_for_download": False,
@@ -87,8 +86,7 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         driver.get(dashboard_url)
         dashboard_ready = False
         for i in range(120):
-            page_source = driver.page_source
-            if ("Bogmayer Analytics Dashboard" in page_source) or ("Upload Dataset" in page_source):
+            if "Bogmayer Analytics Dashboard" in driver.page_source or "Upload Dataset" in driver.page_source:
                 dashboard_ready = True
                 print(f"[OK] Dashboard branding found at {i} seconds.")
                 break
@@ -108,19 +106,15 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         print("[STEP] Waiting for backend analysis (~15s)...")
         time.sleep(15)
 
-        print("[STEP] Clicking PDF analysis trigger button...")
-        download_pdf_locator = (By.ID, "download-pdf")
+        print("[STEP] Clicking dashboard PDF trigger button...")
+        download_pdf_locator = (By.NAME, "download-pdf")  # Use NAME locator as you specified
         if not click_button_with_retry(driver, download_pdf_locator):
             with open("dashboard_analysis_trigger_debug.html", "w") as f:
                 f.write(driver.page_source[:10000])
             return None
 
-        print("[STEP] Clicking final PDF download button...")
-        download_analysis_locator = (By.ID, "download-analysis-btn")
-        if not click_button_with_retry(driver, download_analysis_locator, max_attempts=8, wait_seconds=5):
-            with open("dashboard_final_debug.html", "w") as f:
-                f.write(driver.page_source[:10000])
-            return None
+        # Since you stated the "download-pdf" button is the PDF trigger and needed click,
+        # we do not try to click any other "download-analysis-btn".
 
         print("[STEP] Waiting for PDF file to be fully downloaded...")
         pdf_file = wait_for_pdf_file(download_dir, timeout=120)
@@ -140,7 +134,6 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         return None
 
     finally:
-        print("[STEP] Cleaning up WebDriver.")
+        print("[STEP] Quitting WebDriver.")
         if driver is not None:
             driver.quit()
-
