@@ -21,15 +21,10 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         return None
 
     options = webdriver.ChromeOptions()
-    # Always use headless in CI or container
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    # Remove user-agent/string flags, window size, user-data-dir for reliability
-
-    # Optionally, use default download directory in CI
-    # If download_dir is valid and writable, you can keep this block:
-    # Otherwise, remove for maximum reliability in hosted runners
+    # If download_dir is valid on your runner, you may add back the prefs:
     # prefs = {
     #     "download.default_directory": download_dir,
     #     "download.prompt_for_download": False,
@@ -89,6 +84,7 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
                 download_trigger.click()
                 print("[OK] Dashboard PDF analysis trigger button clicked.")
             except ElementClickInterceptedException:
+                # JavaScript click as ultimate fallback:
                 driver.execute_script("arguments[0].click();", download_trigger)
                 print("[WARN] Intercepted click, used JavaScript to click PDF trigger.")
         except (TimeoutException, NoSuchElementException) as e:
@@ -116,9 +112,10 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
                 f.write(driver.page_source[:10000])
             return None
 
-        print("[STEP] Waiting for new PDF to appear at:", download_dir)
+        # Wait for the new PDF file to appear and be fully saved
+        print("[STEP] Waiting for new PDF file to appear after download...")
         pdf_file = wait_for_new_pdf(download_dir, timeout=90)
-        if pdf_file:
+        if pdf_file and os.path.isfile(pdf_file) and os.path.getsize(pdf_file) > 0:
             print(f"[SUCCESS] Downloaded dashboard PDF: {pdf_file}")
             return pdf_file
         else:
@@ -142,8 +139,9 @@ def wait_for_new_pdf(download_dir, timeout=90):
     start = time.time()
     while True:
         pdfs = [f for f in os.listdir(download_dir) if f.endswith('.pdf')]
-        if pdfs:
-            full_path = os.path.join(download_dir, pdfs[0])
+        # Filter for non-empty PDFs
+        for pf in pdfs:
+            full_path = os.path.join(download_dir, pf)
             if os.path.getsize(full_path) > 0:
                 print(f"[STEP] Found non-empty PDF: {full_path}")
                 return full_path
@@ -151,5 +149,6 @@ def wait_for_new_pdf(download_dir, timeout=90):
             print("[ERROR] Timed out waiting for PDF download in:", download_dir)
             return None
         time.sleep(2)
+
 
 
