@@ -1,6 +1,5 @@
 import os
 import time
-import tempfile
 import traceback
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -14,21 +13,21 @@ from selenium.common.exceptions import (
 )
 from webdriver_manager.chrome import ChromeDriverManager
 
-def click_button_with_retry(driver, by_locator, max_attempts=5, wait_seconds=2):
+def click_button_with_retry(driver, by_locator, max_attempts=6, wait_seconds=3):
     for attempt in range(max_attempts):
         try:
             wait = WebDriverWait(driver, 30)
             wait.until(EC.presence_of_element_located(by_locator))
             element = wait.until(EC.element_to_be_clickable(by_locator))
             driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
-            time.sleep(0.5)
+            time.sleep(1)
             try:
                 element.click()
                 print(f"[OK] Clicked button {by_locator} on attempt {attempt+1}")
                 return True
-            except ElementClickInterceptedException:
+            except ElementClickInterceptedException as e:
                 driver.execute_script("arguments[0].click();", element)
-                print(f"[WARN] JS click fallback for {by_locator} on attempt {attempt+1}")
+                print(f"[WARN] JS click fallback for {by_locator} on attempt {attempt+1}: {e}")
                 return True
         except Exception as e:
             print(f"[WARN] Click attempt {attempt+1} for {by_locator} failed: {e}")
@@ -36,22 +35,23 @@ def click_button_with_retry(driver, by_locator, max_attempts=5, wait_seconds=2):
     print(f"[ERROR] Failed to click button {by_locator} after {max_attempts} attempts")
     return False
 
-def wait_for_pdf_file(download_dir, timeout=90):
+def wait_for_pdf_file(download_dir, timeout=120):
+    print(f"[STEP] Waiting for new PDF in {download_dir} (timeout={timeout}s)...")
     start_time = time.time()
     last_size = -1
     stable_since = None
     while True:
         pdf_files = [f for f in os.listdir(download_dir) if f.endswith('.pdf')]
-        if pdf_files:
-            pdf_path = os.path.join(download_dir, pdf_files[0])
-            size = os.path.getsize(pdf_path)
+        for pf in pdf_files:
+            full_path = os.path.join(download_dir, pf)
+            size = os.path.getsize(full_path)
             if size > 0:
                 if size == last_size:
                     if stable_since is None:
                         stable_since = time.time()
-                    elif time.time() - stable_since > 2:  # filesize stable > 2s
-                        print(f"[OK] PDF file stable and ready: {pdf_path}")
-                        return pdf_path
+                    elif time.time() - stable_since > 2:
+                        print(f"[OK] PDF file stable and ready: {full_path}")
+                        return full_path
                 else:
                     stable_since = None
                     last_size = size
@@ -70,13 +70,13 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    # Uncomment and adjust prefs if your runner supports it
-    # prefs = {
-    #     "download.default_directory": download_dir,
-    #     "download.prompt_for_download": False,
-    #     "download.directory_upgrade": True,
-    # }
-    # options.add_experimental_option("prefs", prefs)
+    # If your runner supports it:
+    prefs = {
+        "download.default_directory": os.path.abspath(download_dir),
+        "download.prompt_for_download": False,
+        "download.directory_upgrade": True,
+    }
+    options.add_experimental_option("prefs", prefs)
 
     driver = None
     try:
@@ -87,7 +87,8 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         driver.get(dashboard_url)
         dashboard_ready = False
         for i in range(120):
-            if "Bogmayer Analytics Dashboard" in driver.page_source or "Upload Dataset" in driver.page_source:
+            page_source = driver.page_source
+            if ("Bogmayer Analytics Dashboard" in page_source) or ("Upload Dataset" in page_source):
                 dashboard_ready = True
                 print(f"[OK] Dashboard branding found at {i} seconds.")
                 break
@@ -98,16 +99,16 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
                 f.write(driver.page_source[:20000])
             return None
 
-        print("[STEP] Waiting for file input visible...")
+        print("[STEP] Waiting for file input to be visible...")
         wait = WebDriverWait(driver, 90)
         file_input = wait.until(EC.visibility_of_element_located((By.ID, "fileInput")))
         print("[OK] File input visible, sending file path.")
         file_input.send_keys(os.path.abspath(input_csv))
 
-        print("[STEP] Waiting 15s for backend analysis...")
+        print("[STEP] Waiting for backend analysis (~15s)...")
         time.sleep(15)
 
-        print("[STEP] Clicking PDF report trigger button...")
+        print("[STEP] Clicking PDF analysis trigger button...")
         download_pdf_locator = (By.ID, "download-pdf")
         if not click_button_with_retry(driver, download_pdf_locator):
             with open("dashboard_analysis_trigger_debug.html", "w") as f:
@@ -116,15 +117,15 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
 
         print("[STEP] Clicking final PDF download button...")
         download_analysis_locator = (By.ID, "download-analysis-btn")
-        if not click_button_with_retry(driver, download_analysis_locator, max_attempts=6, wait_seconds=5):
+        if not click_button_with_retry(driver, download_analysis_locator, max_attempts=8, wait_seconds=5):
             with open("dashboard_final_debug.html", "w") as f:
                 f.write(driver.page_source[:10000])
             return None
 
-        print("[STEP] Waiting for PDF file to download...")
+        print("[STEP] Waiting for PDF file to be fully downloaded...")
         pdf_file = wait_for_pdf_file(download_dir, timeout=120)
         if pdf_file:
-            print(f"[SUCCESS] PDF downloaded: {pdf_file}")
+            print(f"[SUCCESS] PDF downloaded and ready: {pdf_file}")
             return pdf_file
         else:
             print("[ERROR] PDF download failed or timed out.")
@@ -139,6 +140,7 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         return None
 
     finally:
-        print("[STEP] Quitting WebDriver.")
+        print("[STEP] Cleaning up WebDriver.")
         if driver is not None:
             driver.quit()
+
