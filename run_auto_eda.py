@@ -21,20 +21,21 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         return None
 
     options = webdriver.ChromeOptions()
-    # Uncomment next line to debug with a visible browser (not headless)
-    # options.add_argument("--headless=new")  
+    # Always use headless in CI or container
+    options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument(
-        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
-    user_data_dir = tempfile.mkdtemp()
-    options.add_argument(f"--user-data-dir={user_data_dir}")
-    prefs = {
-        "download.default_directory": download_dir,
-        "download.prompt_for_download": False,
-        "download.directory_upgrade": True,
-    }
-    options.add_experimental_option("prefs", prefs)
+    # Remove user-agent/string flags, window size, user-data-dir for reliability
+
+    # Optionally, use default download directory in CI
+    # If download_dir is valid and writable, you can keep this block:
+    # Otherwise, remove for maximum reliability in hosted runners
+    # prefs = {
+    #     "download.default_directory": download_dir,
+    #     "download.prompt_for_download": False,
+    #     "download.directory_upgrade": True,
+    # }
+    # options.add_experimental_option("prefs", prefs)
 
     driver = None
     try:
@@ -42,12 +43,9 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         driver = webdriver.Chrome(
             service=Service(ChromeDriverManager().install()), options=options
         )
-        driver.set_window_size(1280, 1024)  # Larger window sometimes needed for proper rendering
 
-        wait_for_html = WebDriverWait(driver, 120)
         print("[STEP] Waiting for HTML to contain dashboard branding...")
         driver.get(dashboard_url)
-        start_time = time.time()
         dashboard_ready = False
         for i in range(120):
             page_source = driver.page_source
@@ -61,6 +59,7 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
             with open("dashboard_title_debug.html", "w") as f:
                 f.write(driver.page_source[:20000])
             return None
+
         print("[STEP] Waiting for file input element to be visible...")
         wait = WebDriverWait(driver, 90)
         try:
@@ -152,4 +151,5 @@ def wait_for_new_pdf(download_dir, timeout=90):
             print("[ERROR] Timed out waiting for PDF download in:", download_dir)
             return None
         time.sleep(2)
+
 
