@@ -29,12 +29,11 @@ for i, (report_name, url) in enumerate(REPORTS, start=1):
         path = download_report(USERNAME, PASSWORD, url, report_number=i)
         downloaded_files.append(path)
     except Exception as e:
-        print(f" Failed to download {report_name}: {e}")
+        print(f"Failed to download {report_name}: {e}")
 
 if len(downloaded_files) < len(REPORTS):
     print("Warning: Not all reports downloaded successfully.")
 
-# Merge storecounts only if all expected files exist
 expected_storecounts = ['_5.csv', '_6.csv', '_7.csv']
 storecount_files = [f for f in downloaded_files if any(f.endswith(s) for s in expected_storecounts)]
 if len(storecount_files) == 3:
@@ -45,16 +44,13 @@ if len(storecount_files) == 3:
 else:
     print("Warning: Missing one or more storecounts files; skipping merge.")
 
-# Find storecounts CSVs safely
-storecounts_30_csv = next((f for f in downloaded_files if f.endswith('_5.csv')), None)
-storecounts_60_csv = next((f for f in downloaded_files if f.endswith('_6.csv')), None)
-storecounts_90_csv = next((f for f in downloaded_files if f.endswith('_7.csv')), None)
-
-if not (storecounts_30_csv and storecounts_60_csv and storecounts_90_csv):
-    print("Warning: One or more storecounts reports failed to download.")
+# Storecounts CSV detection
+storecounts_30_csv = next((f for f in downloaded_files if f and f.endswith('_5.csv')), None)
+storecounts_60_csv = next((f for f in downloaded_files if f and f.endswith('_6.csv')), None)
+storecounts_90_csv = next((f for f in downloaded_files if f and f.endswith('_7.csv')), None)
 
 pdf_files = []
-# Convert main product reports (1-4)
+# Product report PDFs
 for csv_path in downloaded_files[:4]:
     if csv_path and os.path.isfile(csv_path):
         try:
@@ -62,48 +58,34 @@ for csv_path in downloaded_files[:4]:
             if pdf_path and os.path.isfile(pdf_path):
                 pdf_files.append(pdf_path)
             else:
-                print(f"PDF file for {csv_path} not found after conversion.")
+                print(f"PDF for {csv_path} not found after conversion.")
         except Exception as e:
             print(f"Failed to convert {csv_path} to PDF: {e}")
 
-# Convert storecounts CSVs 30, 60, and 90 days
-if storecounts_30_csv and os.path.isfile(storecounts_30_csv):
-    try:
-        pdf_sc30 = csv_to_pdf(storecounts_30_csv)
-        if pdf_sc30 and os.path.isfile(pdf_sc30):
-            pdf_files.append(pdf_sc30)
-        else:
-            print("Storecounts 30-day PDF not found after conversion.")
-    except Exception as e:
-        print(f"Failed to convert storecounts 30 CSV to PDF: {e}")
+# Storecounts PDFs
+for sc_csv in (storecounts_30_csv, storecounts_60_csv, storecounts_90_csv):
+    if sc_csv and os.path.isfile(sc_csv):
+        try:
+            sc_pdf = csv_to_pdf(sc_csv)
+            if sc_pdf and os.path.isfile(sc_pdf):
+                pdf_files.append(sc_pdf)
+            else:
+                print(f"Storecounts PDF for {sc_csv} not found after conversion.")
+        except Exception as e:
+            print(f"Failed to convert storecounts CSV {sc_csv} to PDF: {e}")
 
-if storecounts_60_csv and os.path.isfile(storecounts_60_csv):
-    try:
-        pdf_sc60 = csv_to_pdf(storecounts_60_csv)
-        if pdf_sc60 and os.path.isfile(pdf_sc60):
-            pdf_files.append(pdf_sc60)
-        else:
-            print("Storecounts 60-day PDF not found after conversion.")
-    except Exception as e:
-        print(f"Failed to convert storecounts 60 CSV to PDF: {e}")
-
-if storecounts_90_csv and os.path.isfile(storecounts_90_csv):
-    try:
-        pdf_sc90 = csv_to_pdf(storecounts_90_csv)
-        if pdf_sc90 and os.path.isfile(pdf_sc90):
-            pdf_files.append(pdf_sc90)
-        else:
-            print("Storecounts 90-day PDF not found after conversion.")
-    except Exception as e:
-        print("90-day storecounts CSV file missing; skipping its PDF attachment.")
-
-# Run EDA only if valid target CSV exists
+# Run EDA, rename dynamically generated dashboard PDF for consistency
 dashboard_url = "https://automatedanalytics.onrender.com/"
 if downloaded_files[1] and os.path.isfile(downloaded_files[1]):
     try:
         eda_pdf_path = run_eda_and_download_report(downloaded_files[1], dashboard_url, storecounts.DOWNLOAD_DIR)
         if eda_pdf_path and os.path.isfile(eda_pdf_path):
-            pdf_files.append(eda_pdf_path)
+            # Name pattern (e.g., for today): Report_YYYY-MM-DD_EDA.pdf
+            today = datetime.now().strftime("%Y-%m-%d")
+            target_eda_pdf_name = f"Report_{today}_EDA.pdf"
+            target_eda_pdf_path = os.path.join(storecounts.DOWNLOAD_DIR, target_eda_pdf_name)
+            shutil.move(eda_pdf_path, target_eda_pdf_path)
+            pdf_files.append(target_eda_pdf_path)
         else:
             print("EDA PDF file missing; skipping attachment.")
     except Exception as e:
@@ -112,11 +94,12 @@ else:
     print("No valid target CSV for dashboard EDA; skipping.")
 
 try:
+    valid_attachments = [f for f in pdf_files if os.path.isfile(f)]
     send_email_with_attachments(
         sender=GMAIL_ADDRESS,
         to=", ".join(GMAIL_RECIPIENTS),
         subject="Automated DSD Reports",
-        body="""This is an automated email test.
+        body="""This is an automated email.
 
 Attached are the latest DSD reports as PDFs:
 1. SCP/KW in SC
@@ -125,7 +108,7 @@ Attached are the latest DSD reports as PDFs:
 4. Cavalier
 5. List of Retail Stores
 """,
-        attachments=[f for f in pdf_files if f]
+        attachments=valid_attachments
     )
     print("\nEmail sent successfully.")
 except Exception as e:
