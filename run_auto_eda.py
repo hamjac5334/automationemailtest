@@ -15,13 +15,11 @@ from selenium.common.exceptions import (
 from webdriver_manager.chrome import ChromeDriverManager
 
 def clean_download_dir(download_dir):
-    # Remove existing PDFs before test
     for f in os.listdir(download_dir):
         if f.endswith('.pdf'):
             os.remove(os.path.join(download_dir, f))
 
 def enable_chrome_headless_download(driver, download_dir):
-    # Force file downloads in headless Chrome via DevTools Protocol
     driver.execute_cdp_cmd(
         "Page.setDownloadBehavior",
         {"behavior": "allow", "downloadPath": os.path.abspath(download_dir)}
@@ -42,13 +40,12 @@ def click_button_wait_enabled_with_retry(driver, by_locator, max_attempts=8, wai
             wait = WebDriverWait(driver, 30)
             wait.until(EC.presence_of_element_located(by_locator))
             element = driver.find_element(*by_locator)
-            # Wait until enabled (not disabled)
             for enabled_wait in range(40):
                 if element.is_enabled():
                     break
-                print(f"[INFO] Button {by_locator} is disabled, waiting to become enabled...")
+                print(f"[INFO] Button {by_locator} is disabled, waiting...")
                 time.sleep(1)
-                element = driver.find_element(*by_locator)  # re-fetch
+                element = driver.find_element(*by_locator)
             if not element.is_enabled():
                 print(f"[WARN] Button {by_locator} still disabled after 40s, retrying...")
                 continue
@@ -59,7 +56,7 @@ def click_button_wait_enabled_with_retry(driver, by_locator, max_attempts=8, wai
                 print(f"[OK] Clicked button {by_locator} on attempt {attempt+1}")
                 return True
             except ElementClickInterceptedException as e:
-                print(f"[WARN] Intercepted, JS click fallback for {by_locator} on attempt {attempt+1}: {e}")
+                print(f"[WARN] Intercepted, JS click fallback: {e}")
                 remove_overlays(driver)
                 driver.execute_script("arguments[0].click();", element)
                 print(f"[OK] JS click fallback succeeded for button {by_locator} attempt {attempt+1}")
@@ -113,13 +110,11 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         "download.default_directory": os.path.abspath(download_dir),
         "download.prompt_for_download": False,
         "download.directory_upgrade": True,
-        "plugins.always_open_pdf_externally": True,  # This is key for PDF downloads in Chrome!
+        "plugins.always_open_pdf_externally": True,
     }
     options.add_experimental_option("prefs", prefs)
 
-    # Clean out old downloads before starting
     clean_download_dir(download_dir)
-
     driver = None
     try:
         print(f"[STEP] Launching WebDriver for dashboard: {dashboard_url}")
@@ -176,7 +171,6 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
             with open("dashboard_error.html", "w") as f:
                 f.write(driver.page_source[:10000])
         return None
-
     finally:
         print("[STEP] Quitting WebDriver.")
         if driver is not None:
