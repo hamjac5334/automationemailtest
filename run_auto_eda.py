@@ -14,7 +14,6 @@ from selenium.common.exceptions import (
 from webdriver_manager.chrome import ChromeDriverManager
 
 def remove_overlays(driver):
-    # Remove common overlay/backdrop elements that might block clicks
     scripts = [
         "document.querySelectorAll('.modal-backdrop, .overlay, .spinner, .loader').forEach(e => e.remove())",
         "document.body.style.overflow = 'auto';"
@@ -23,25 +22,33 @@ def remove_overlays(driver):
         driver.execute_script(script)
     print("[INFO] Removed possible blocking overlays.")
 
-def click_button_with_retry(driver, by_locator, max_attempts=8, wait_seconds=3):
+def click_button_wait_enabled_with_retry(driver, by_locator, max_attempts=8, wait_seconds=3):
     for attempt in range(max_attempts):
         try:
             wait = WebDriverWait(driver, 30)
             wait.until(EC.presence_of_element_located(by_locator))
-            element = wait.until(EC.element_to_be_clickable(by_locator))
+            element = driver.find_element(*by_locator)
+            # Wait until enabled (not disabled)
+            for enabled_wait in range(40):
+                if element.is_enabled():
+                    break
+                print(f"[INFO] Button {by_locator} is disabled, waiting to become enabled...")
+                time.sleep(1)
+                element = driver.find_element(*by_locator)  # re-fetch
+            if not element.is_enabled():
+                print(f"[WARN] Button {by_locator} still disabled after 40s, retrying...")
+                continue
             driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
-            time.sleep(1)  # Give page time to adjust layout
-
+            time.sleep(1)
             try:
                 element.click()
                 print(f"[OK] Clicked button {by_locator} on attempt {attempt+1}")
                 return True
             except ElementClickInterceptedException as e:
-                print(f"[WARN] Element click intercepted on attempt {attempt+1}, trying JS click fallback: {e}")
-                # Remove potential overlays that interfere and retry JS click
+                print(f"[WARN] Intercepted, JS click fallback for {by_locator} on attempt {attempt+1}: {e}")
                 remove_overlays(driver)
                 driver.execute_script("arguments[0].click();", element)
-                print(f"[OK] JavaScript click succeeded on attempt {attempt+1}")
+                print(f"[OK] JS click fallback succeeded for button {by_locator} attempt {attempt+1}")
                 return True
         except Exception as e:
             print(f"[WARN] Click attempt {attempt+1} for {by_locator} failed: {e}")
@@ -121,10 +128,10 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         print("[STEP] Waiting for backend analysis (~15s)...")
         time.sleep(15)
 
-        print("[STEP] Clicking dashboard PDF trigger button...")
-        download_pdf_locator = (By.NAME, "download-pdf")
-        if not click_button_with_retry(driver, download_pdf_locator):
-            with open("dashboard_analysis_trigger_debug.html", "w") as f:
+        print("[STEP] Clicking dashboard PDF trigger button by ID...")
+        download_pdf_locator = (By.ID, "download-pdf")
+        if not click_button_wait_enabled_with_retry(driver, download_pdf_locator):
+            with open("dashboard_pdf_click_fail.html", "w") as f:
                 f.write(driver.page_source[:10000])
             return None
 
