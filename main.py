@@ -58,31 +58,42 @@ pdf_files = []
 for csv_path in downloaded_files[:4]:
     if csv_path and os.path.isfile(csv_path):
         try:
-            pdf_files.append(csv_to_pdf(csv_path))
+            pdf_path = csv_to_pdf(csv_path)
+            if pdf_path and os.path.isfile(pdf_path):
+                pdf_files.append(pdf_path)
+            else:
+                print(f"PDF file for {csv_path} not found after conversion.")
         except Exception as e:
             print(f"Failed to convert {csv_path} to PDF: {e}")
 
-# Convert storecounts CSVs 30 and 60 days
-pdf_sc30 = pdf_sc60 = pdf_sc90 = None
-
+# Convert storecounts CSVs 30, 60, and 90 days
 if storecounts_30_csv and os.path.isfile(storecounts_30_csv):
     try:
         pdf_sc30 = csv_to_pdf(storecounts_30_csv)
-        pdf_files.append(pdf_sc30)
+        if pdf_sc30 and os.path.isfile(pdf_sc30):
+            pdf_files.append(pdf_sc30)
+        else:
+            print("Storecounts 30-day PDF not found after conversion.")
     except Exception as e:
         print(f"Failed to convert storecounts 30 CSV to PDF: {e}")
 
 if storecounts_60_csv and os.path.isfile(storecounts_60_csv):
     try:
         pdf_sc60 = csv_to_pdf(storecounts_60_csv)
-        pdf_files.append(pdf_sc60)
+        if pdf_sc60 and os.path.isfile(pdf_sc60):
+            pdf_files.append(pdf_sc60)
+        else:
+            print("Storecounts 60-day PDF not found after conversion.")
     except Exception as e:
         print(f"Failed to convert storecounts 60 CSV to PDF: {e}")
 
 if storecounts_90_csv and os.path.isfile(storecounts_90_csv):
     try:
         pdf_sc90 = csv_to_pdf(storecounts_90_csv)
-        pdf_files.append(pdf_sc90)
+        if pdf_sc90 and os.path.isfile(pdf_sc90):
+            pdf_files.append(pdf_sc90)
+        else:
+            print("Storecounts 90-day PDF not found after conversion.")
     except Exception as e:
         print("90-day storecounts CSV file missing; skipping its PDF attachment.")
 
@@ -91,7 +102,10 @@ dashboard_url = "https://automatedanalytics.onrender.com/"
 if downloaded_files[1] and os.path.isfile(downloaded_files[1]):
     try:
         eda_pdf_path = run_eda_and_download_report(downloaded_files[1], dashboard_url, storecounts.DOWNLOAD_DIR)
-        pdf_files.append(eda_pdf_path)
+        if eda_pdf_path and os.path.isfile(eda_pdf_path):
+            pdf_files.append(eda_pdf_path)
+        else:
+            print("EDA PDF file missing; skipping attachment.")
     except Exception as e:
         print(f"Failed to run dashboard analysis: {e}")
 else:
