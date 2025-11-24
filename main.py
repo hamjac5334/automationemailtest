@@ -54,30 +54,47 @@ storecounts_30_csv = next((f for f in downloaded_files if f and f.endswith('_5.c
 storecounts_60_csv = next((f for f in downloaded_files if f and f.endswith('_6.csv')), None)
 storecounts_90_csv = next((f for f in downloaded_files if f and f.endswith('_7.csv')), None)
 
-download_dir = storecounts.DOWNLOAD_DIR
-
 pdf_files = []
-for csv_path in downloaded_files[:4] + [storecounts_30_csv, storecounts_60_csv, storecounts_90_csv]:
+
+# Convert main reports to PDF
+for csv_path in downloaded_files[:4]:
     if csv_path and os.path.isfile(csv_path):
         try:
             pdf_path = csv_to_pdf(csv_path)
+            print(f"Converted {csv_path} -> {pdf_path}, exists: {os.path.isfile(pdf_path) if pdf_path else 'N/A'}")
             if pdf_path and os.path.isfile(pdf_path):
-                pdf_files.append(os.path.abspath(pdf_path))
+                pdf_files.append(pdf_path)
             else:
-                print(f"PDF for {csv_path} missing after conversion! Path attempted: {pdf_path}")
+                print(f"[WARN] PDF for {csv_path} missing after conversion!")
         except Exception as e:
             print(f"Failed to convert {csv_path} to PDF: {e}")
 
+# Convert storecounts CSVs to PDF (if present)
+for sc_csv in (storecounts_30_csv, storecounts_60_csv, storecounts_90_csv):
+    if sc_csv and os.path.isfile(sc_csv):
+        try:
+            sc_pdf = csv_to_pdf(sc_csv)
+            print(f"Converted {sc_csv} -> {sc_pdf}, exists: {os.path.isfile(sc_pdf) if sc_pdf else 'N/A'}")
+            if sc_pdf and os.path.isfile(sc_pdf):
+                pdf_files.append(sc_pdf)
+            else:
+                print(f"[WARN] Storecounts PDF for {sc_csv} missing after conversion!")
+        except Exception as e:
+            print(f"Failed to convert storecounts CSV {sc_csv} to PDF: {e}")
+
+# Run EDA report (dashboard automation) and append its PDF
 dashboard_url = "https://automatedanalytics.onrender.com/"
-eda_pdf_path = None
-if len(downloaded_files) > 1 and downloaded_files[1] and os.path.isfile(downloaded_files[1]):
+if (len(downloaded_files) > 1) and downloaded_files[1] and os.path.isfile(downloaded_files[1]):
+    print(f"Preparing EDA analysis for {downloaded_files[1]}")
     try:
-        eda_pdf_path = run_eda_and_download_report(downloaded_files[1], dashboard_url, download_dir)
+        eda_pdf_path = run_eda_and_download_report(downloaded_files[1], dashboard_url, storecounts.DOWNLOAD_DIR)
+        print(f"EDA output: {eda_pdf_path} (exists: {os.path.isfile(eda_pdf_path) if eda_pdf_path else 'N/A'})")
         if eda_pdf_path and os.path.isfile(eda_pdf_path):
             today = datetime.now().strftime("%Y-%m-%d")
-            target_eda_pdf_path = os.path.join(download_dir, f"Report_{today}_EDA.pdf")
+            target_eda_pdf_name = f"Report_{today}_EDA.pdf"
+            target_eda_pdf_path = os.path.join(storecounts.DOWNLOAD_DIR, target_eda_pdf_name)
             shutil.move(eda_pdf_path, target_eda_pdf_path)
-            pdf_files.append(os.path.abspath(target_eda_pdf_path))
+            pdf_files.append(target_eda_pdf_path)
             print(f"Appended EDA PDF: {target_eda_pdf_path}")
         else:
             print("EDA PDF file missing; skipping attachment.")
@@ -86,17 +103,30 @@ if len(downloaded_files) > 1 and downloaded_files[1] and os.path.isfile(download
 else:
     print("No valid target CSV for dashboard EDA; skipping.")
 
-print("\nBefore sending email, PDF files in dir:")
-print(os.listdir(download_dir))
-print("\nThese are the exact attachment paths being used:")
+print("\nFinal list of PDFs to attach:")
 for f in pdf_files:
     print(f"  {f} (exists: {os.path.isfile(f)})")
 
-valid_attachments = [f for f in pdf_files if os.path.isfile(f)]
-send_email_with_attachments(
-    sender=GMAIL_ADDRESS,
-    to=", ".join(GMAIL_RECIPIENTS),
-    subject="Automated DSD Reports",
-    body="This is an automated email with latest DSD reports.",
-    attachments=valid_attachments
-)
+try:
+    valid_attachments = [f for f in pdf_files if os.path.isfile(f)]
+    print("\nSending email with these attachments:")
+    for f in valid_attachments:
+        print(f"  {f}")
+    send_email_with_attachments(
+        sender=GMAIL_ADDRESS,
+        to=", ".join(GMAIL_RECIPIENTS),
+        subject="Automated DSD Reports",
+        body="""This is an automated email.
+
+Attached are the latest DSD reports as PDFs:
+1. SCP/KW in SC
+2. SCP in GA
+3. Tryon
+4. Cavalier
+5. List of Retail Stores
+""",
+        attachments=valid_attachments
+    )
+    print("\nEmail sent successfully.")
+except Exception as e:
+    print(f"\nFailed to send email: {e}")
