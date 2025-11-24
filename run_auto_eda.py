@@ -1,5 +1,6 @@
 import os
 import time
+import shutil
 import traceback
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -12,6 +13,19 @@ from selenium.common.exceptions import (
     NoSuchElementException,
 )
 from webdriver_manager.chrome import ChromeDriverManager
+
+def clean_download_dir(download_dir):
+    # Remove existing PDFs before test
+    for f in os.listdir(download_dir):
+        if f.endswith('.pdf'):
+            os.remove(os.path.join(download_dir, f))
+
+def enable_chrome_headless_download(driver, download_dir):
+    # Force file downloads in headless Chrome via DevTools Protocol
+    driver.execute_cdp_cmd(
+        "Page.setDownloadBehavior",
+        {"behavior": "allow", "downloadPath": os.path.abspath(download_dir)}
+    )
 
 def remove_overlays(driver):
     scripts = [
@@ -56,26 +70,30 @@ def click_button_wait_enabled_with_retry(driver, by_locator, max_attempts=8, wai
     print(f"[ERROR] Failed to click button {by_locator} after {max_attempts} attempts")
     return False
 
-def wait_for_pdf_file(download_dir, timeout=120):
+def wait_for_pdf_file(download_dir, timeout=40):
     print(f"[STEP] Waiting for new PDF in {download_dir} (timeout={timeout}s)...")
     start_time = time.time()
     last_size = -1
     stable_since = None
+    seen_files = set()
     while True:
         pdf_files = [f for f in os.listdir(download_dir) if f.endswith('.pdf')]
-        for pf in pdf_files:
-            full_path = os.path.join(download_dir, pf)
-            size = os.path.getsize(full_path)
-            if size > 0:
-                if size == last_size:
-                    if stable_since is None:
-                        stable_since = time.time()
-                    elif time.time() - stable_since > 2:
-                        print(f"[OK] PDF file stable and ready: {full_path}")
-                        return full_path
-                else:
-                    stable_since = None
-                    last_size = size
+        new_files = set(pdf_files) - seen_files
+        if pdf_files:
+            for pf in new_files if new_files else pdf_files:
+                full_path = os.path.join(download_dir, pf)
+                size = os.path.getsize(full_path)
+                if size > 0:
+                    if size == last_size:
+                        if stable_since is None:
+                            stable_since = time.time()
+                        elif time.time() - stable_since > 2:
+                            print(f"[OK] PDF file stable and ready: {full_path}")
+                            return full_path
+                    else:
+                        stable_since = None
+                        last_size = size
+            seen_files.update(pdf_files)
         if time.time() - start_time > timeout:
             print(f"[ERROR] Timed out waiting for PDF download in {download_dir}")
             return None
@@ -95,13 +113,18 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         "download.default_directory": os.path.abspath(download_dir),
         "download.prompt_for_download": False,
         "download.directory_upgrade": True,
+        "plugins.always_open_pdf_externally": True,  # This is key for PDF downloads in Chrome!
     }
     options.add_experimental_option("prefs", prefs)
+
+    # Clean out old downloads before starting
+    clean_download_dir(download_dir)
 
     driver = None
     try:
         print(f"[STEP] Launching WebDriver for dashboard: {dashboard_url}")
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        enable_chrome_headless_download(driver, download_dir)
 
         print("[STEP] Waiting for dashboard branding in HTML...")
         driver.get(dashboard_url)
@@ -128,6 +151,7 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         print("[STEP] Waiting for backend analysis (~15s)...")
         time.sleep(15)
 
+        print("[STEP] Directory before download click:", os.listdir(download_dir))
         print("[STEP] Clicking dashboard PDF trigger button by ID...")
         download_pdf_locator = (By.ID, "download-pdf")
         if not click_button_wait_enabled_with_retry(driver, download_pdf_locator):
@@ -135,8 +159,9 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
                 f.write(driver.page_source[:10000])
             return None
 
+        print("[STEP] Directory after download click:", os.listdir(download_dir))
         print("[STEP] Waiting for PDF file to be fully downloaded...")
-        pdf_file = wait_for_pdf_file(download_dir, timeout=120)
+        pdf_file = wait_for_pdf_file(download_dir, timeout=40)
         if pdf_file:
             print(f"[SUCCESS] PDF downloaded and ready: {pdf_file}")
             return pdf_file
