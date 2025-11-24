@@ -23,6 +23,8 @@ REPORTS = [
     ("Store Counts 90 Days", "https://dsdlink.com/Home?DashboardID=100120&ReportID=23157734")
 ]
 
+download_dir = storecounts.DOWNLOAD_DIR
+
 print("Downloading reports...\n")
 downloaded_files = []
 for i, (report_name, url) in enumerate(REPORTS, start=1):
@@ -44,7 +46,7 @@ expected_storecounts = ['_5.csv', '_6.csv', '_7.csv']
 storecount_files = [f for f in downloaded_files if any(f and f.endswith(s) for s in expected_storecounts)]
 if len(storecount_files) == 3:
     merged_storecounts_df = storecounts.merge_three_storecounts_reports()
-    combined_storecounts_path = os.path.join(storecounts.DOWNLOAD_DIR, "combined_storecounts.csv")
+    combined_storecounts_path = os.path.join(download_dir, "combined_storecounts.csv")
     merged_storecounts_df.to_csv(combined_storecounts_path, index=False)
     set_storecounts_path(combined_storecounts_path)
 else:
@@ -56,43 +58,34 @@ storecounts_90_csv = next((f for f in downloaded_files if f and f.endswith('_7.c
 
 pdf_files = []
 
-# Convert main reports to PDF
-for csv_path in downloaded_files[:4]:
+# Convert all original CSV reports to PDF as ABSOLUTE paths
+for csv_path in downloaded_files[:4] + [storecounts_30_csv, storecounts_60_csv, storecounts_90_csv]:
     if csv_path and os.path.isfile(csv_path):
         try:
             pdf_path = csv_to_pdf(csv_path)
-            print(f"Converted {csv_path} -> {pdf_path}, exists: {os.path.isfile(pdf_path) if pdf_path else 'N/A'}")
-            if pdf_path and os.path.isfile(pdf_path):
-                pdf_files.append(pdf_path)
+            abs_pdf_path = os.path.abspath(pdf_path) if pdf_path else None
+            print(f"Converted {csv_path} -> {abs_pdf_path}, exists: {os.path.isfile(abs_pdf_path) if abs_pdf_path else 'N/A'}")
+            if abs_pdf_path and os.path.isfile(abs_pdf_path):
+                pdf_files.append(abs_pdf_path)
             else:
                 print(f"[WARN] PDF for {csv_path} missing after conversion!")
         except Exception as e:
             print(f"Failed to convert {csv_path} to PDF: {e}")
 
-# Convert storecounts CSVs to PDF (if present)
-for sc_csv in (storecounts_30_csv, storecounts_60_csv, storecounts_90_csv):
-    if sc_csv and os.path.isfile(sc_csv):
-        try:
-            sc_pdf = csv_to_pdf(sc_csv)
-            print(f"Converted {sc_csv} -> {sc_pdf}, exists: {os.path.isfile(sc_pdf) if sc_pdf else 'N/A'}")
-            if sc_pdf and os.path.isfile(sc_pdf):
-                pdf_files.append(sc_pdf)
-            else:
-                print(f"[WARN] Storecounts PDF for {sc_csv} missing after conversion!")
-        except Exception as e:
-            print(f"Failed to convert storecounts CSV {sc_csv} to PDF: {e}")
+print("\nPDFs before EDA was run:")
+for f in pdf_files:
+    print(f"  {f} (exists: {os.path.isfile(f)})")
 
-# Run EDA report (dashboard automation) and append its PDF
+# Run EDA, rename only its PDF, and append
 dashboard_url = "https://automatedanalytics.onrender.com/"
 if (len(downloaded_files) > 1) and downloaded_files[1] and os.path.isfile(downloaded_files[1]):
     print(f"Preparing EDA analysis for {downloaded_files[1]}")
     try:
-        eda_pdf_path = run_eda_and_download_report(downloaded_files[1], dashboard_url, storecounts.DOWNLOAD_DIR)
+        eda_pdf_path = run_eda_and_download_report(downloaded_files[1], dashboard_url, download_dir)
         print(f"EDA output: {eda_pdf_path} (exists: {os.path.isfile(eda_pdf_path) if eda_pdf_path else 'N/A'})")
         if eda_pdf_path and os.path.isfile(eda_pdf_path):
             today = datetime.now().strftime("%Y-%m-%d")
-            target_eda_pdf_name = f"Report_{today}_EDA.pdf"
-            target_eda_pdf_path = os.path.join(storecounts.DOWNLOAD_DIR, target_eda_pdf_name)
+            target_eda_pdf_path = os.path.abspath(os.path.join(download_dir, f"Report_{today}_EDA.pdf"))
             shutil.move(eda_pdf_path, target_eda_pdf_path)
             pdf_files.append(target_eda_pdf_path)
             print(f"Appended EDA PDF: {target_eda_pdf_path}")
@@ -107,11 +100,12 @@ print("\nFinal list of PDFs to attach:")
 for f in pdf_files:
     print(f"  {f} (exists: {os.path.isfile(f)})")
 
+valid_attachments = [f for f in pdf_files if os.path.isfile(f)]
+print("\nSending email with these attachments:")
+for f in valid_attachments:
+    print(f"  {f}")
+
 try:
-    valid_attachments = [f for f in pdf_files if os.path.isfile(f)]
-    print("\nSending email with these attachments:")
-    for f in valid_attachments:
-        print(f"  {f}")
     send_email_with_attachments(
         sender=GMAIL_ADDRESS,
         to=", ".join(GMAIL_RECIPIENTS),
