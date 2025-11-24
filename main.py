@@ -56,10 +56,15 @@ storecounts_30_csv = next((f for f in downloaded_files if f and f.endswith('_5.c
 storecounts_60_csv = next((f for f in downloaded_files if f and f.endswith('_6.csv')), None)
 storecounts_90_csv = next((f for f in downloaded_files if f and f.endswith('_7.csv')), None)
 
+# --------------------------------------------------
+# Convert ALL original and storecounts CSVs to PDF
+# --------------------------------------------------
 pdf_files = []
+all_pdfs_expected = []
 
-# Convert all original CSV reports to PDF as ABSOLUTE paths
-for csv_path in downloaded_files[:4] + [storecounts_30_csv, storecounts_60_csv, storecounts_90_csv]:
+csv_to_pdf_map = {}
+# Reports 1-7
+for csv_path in downloaded_files:
     if csv_path and os.path.isfile(csv_path):
         try:
             pdf_path = csv_to_pdf(csv_path)
@@ -67,17 +72,19 @@ for csv_path in downloaded_files[:4] + [storecounts_30_csv, storecounts_60_csv, 
             print(f"Converted {csv_path} -> {abs_pdf_path}, exists: {os.path.isfile(abs_pdf_path) if abs_pdf_path else 'N/A'}")
             if abs_pdf_path and os.path.isfile(abs_pdf_path):
                 pdf_files.append(abs_pdf_path)
+                csv_to_pdf_map[csv_path] = abs_pdf_path
+                all_pdfs_expected.append(abs_pdf_path)
             else:
                 print(f"[WARN] PDF for {csv_path} missing after conversion!")
         except Exception as e:
             print(f"Failed to convert {csv_path} to PDF: {e}")
 
-print("\nPDFs before EDA was run:")
-for f in pdf_files:
-    print(f"  {f} (exists: {os.path.isfile(f)})")
-
-# Run EDA, rename only its PDF, and append
+# --------------------------------------------------
+# EDA dashboard PDF
+# --------------------------------------------------
 dashboard_url = "https://automatedanalytics.onrender.com/"
+eda_pdf_path = None
+
 if (len(downloaded_files) > 1) and downloaded_files[1] and os.path.isfile(downloaded_files[1]):
     print(f"Preparing EDA analysis for {downloaded_files[1]}")
     try:
@@ -86,8 +93,10 @@ if (len(downloaded_files) > 1) and downloaded_files[1] and os.path.isfile(downlo
         if eda_pdf_path and os.path.isfile(eda_pdf_path):
             today = datetime.now().strftime("%Y-%m-%d")
             target_eda_pdf_path = os.path.abspath(os.path.join(download_dir, f"Report_{today}_EDA.pdf"))
-            shutil.move(eda_pdf_path, target_eda_pdf_path)
+            if not os.path.samefile(eda_pdf_path, target_eda_pdf_path):
+                shutil.move(eda_pdf_path, target_eda_pdf_path)
             pdf_files.append(target_eda_pdf_path)
+            all_pdfs_expected.append(target_eda_pdf_path)
             print(f"Appended EDA PDF: {target_eda_pdf_path}")
         else:
             print("EDA PDF file missing; skipping attachment.")
@@ -96,11 +105,18 @@ if (len(downloaded_files) > 1) and downloaded_files[1] and os.path.isfile(downlo
 else:
     print("No valid target CSV for dashboard EDA; skipping.")
 
-print("\nFinal list of PDFs to attach:")
-for f in pdf_files:
+# --------------------------------------------------
+# List everything that exists
+# --------------------------------------------------
+print("\nDownload dir contents before attach:")
+print(os.listdir(download_dir))
+
+print("\nFinal list of PDFs to attach (should all be True):")
+for f in all_pdfs_expected:
     print(f"  {f} (exists: {os.path.isfile(f)})")
 
-valid_attachments = [f for f in pdf_files if os.path.isfile(f)]
+valid_attachments = [f for f in all_pdfs_expected if os.path.isfile(f)]
+
 print("\nSending email with these attachments:")
 for f in valid_attachments:
     print(f"  {f}")
