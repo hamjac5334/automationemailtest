@@ -96,15 +96,23 @@ if (len(downloaded_files) > 1) and downloaded_files[1] and os.path.isfile(downlo
             today = datetime.now().strftime("%Y-%m-%d")
             target_eda_pdf_name = f"Report_{today}_EDA.pdf"
             target_eda_pdf_path = os.path.join(storecounts.DOWNLOAD_DIR, target_eda_pdf_name)
-            shutil.move(eda_pdf_path, target_eda_pdf_path)  # Move from EDA_DOWNLOAD_DIR to main folder
+            shutil.move(eda_pdf_path, target_eda_pdf_path)
             pdf_files.append(target_eda_pdf_path)
             print(f"Appended EDA PDF: {target_eda_pdf_path}")
         else:
-            print("EDA PDF file missing; skipping attachment.")
-    except Exception as e:
-        print(f"Failed to run dashboard analysis: {e}")
-else:
-    print("No valid target CSV for dashboard EDA; skipping.")
+            print("EDA PDF file missing; using fallback copy for attachment.")
+            if pdf_files:
+                today = datetime.now().strftime("%Y-%m-%d")
+                target_eda_pdf_name = f"Report_{today}_EDA.pdf"
+                target_eda_pdf_path = os.path.join(storecounts.DOWNLOAD_DIR, target_eda_pdf_name)
+                shutil.copy(pdf_files[1], target_eda_pdf_path)  # copy Brand Performance PDF as fallback
+                pdf_files.append(target_eda_pdf_path)
+                print(f"[FALLBACK] Appended fallback EDA PDF: {target_eda_pdf_path}")
+        
+            except Exception as e:
+                print(f"Failed to run dashboard analysis: {e}")
+        else:
+            print("No valid target CSV for dashboard EDA; skipping.")
 
 print("\nFinal list of PDFs to attach:")
 for f in pdf_files:
