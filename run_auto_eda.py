@@ -114,7 +114,7 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
     }
     options.add_experimental_option("prefs", prefs)
 
-    clean_download_dir(download_dir)
+    #clean_download_dir(download_dir)
     driver = None
     try:
         print(f"[STEP] Launching WebDriver for dashboard: {dashboard_url}")
