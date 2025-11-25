@@ -23,9 +23,6 @@ REPORTS = [
     ("Store Counts 90 Days", "https://dsdlink.com/Home?DashboardID=100120&ReportID=23157734")
 ]
 
-EDA_DOWNLOAD_DIR = os.path.join(storecounts.DOWNLOAD_DIR, "EDA_Downloads")
-os.makedirs(EDA_DOWNLOAD_DIR, exist_ok=True)
-
 print("Downloading reports...\n")
 downloaded_files = []
 for i, (report_name, url) in enumerate(REPORTS, start=1):
@@ -85,58 +82,47 @@ for sc_csv in (storecounts_30_csv, storecounts_60_csv, storecounts_90_csv):
         except Exception as e:
             print(f"Failed to convert storecounts CSV {sc_csv} to PDF: {e}")
 
-# Run EDA report (dashboard automation) in separate download dir and append its PDF
-dashboard_url = "https://automatedanalytics.onrender.com/"
-if (len(downloaded_files) > 1) and downloaded_files[1] and os.path.isfile(downloaded_files[1]):
-    print(f"Preparing EDA analysis for {downloaded_files[1]}")
-    try:
-        eda_pdf_path = run_eda_and_download_report(downloaded_files[1], dashboard_url, EDA_DOWNLOAD_DIR)
-        print(f"EDA output: {eda_pdf_path} (exists: {os.path.isfile(eda_pdf_path) if eda_pdf_path else 'N/A'})")
-        if eda_pdf_path and os.path.isfile(eda_pdf_path):
-            today = datetime.now().strftime("%Y-%m-%d")
-            target_eda_pdf_name = f"Report_{today}_EDA.pdf"
-            target_eda_pdf_path = os.path.join(storecounts.DOWNLOAD_DIR, target_eda_pdf_name)
-            shutil.move(eda_pdf_path, target_eda_pdf_path)
-            pdf_files.append(target_eda_pdf_path)
-            print(f"Appended EDA PDF: {target_eda_pdf_path}")
-        else:
-            print("EDA PDF file missing; using fallback copy for attachment.")
-            if pdf_files:
-                today = datetime.now().strftime("%Y-%m-%d")
-                target_eda_pdf_name = f"Report_{today}_EDA.pdf"
-                target_eda_pdf_path = os.path.join(storecounts.DOWNLOAD_DIR, target_eda_pdf_name)
-                shutil.copy(pdf_files[1], target_eda_pdf_path)  # copy Brand Performance PDF as fallback
-                pdf_files.append(target_eda_pdf_path)
-                print(f"[FALLBACK] Appended fallback EDA PDF: {target_eda_pdf_path}")
-    except Exception as e:
-        print(f"Failed to run dashboard analysis: {e}")
-else:
-    print("No valid target CSV for dashboard EDA; skipping.")
-
-print("\nFinal list of PDFs to attach:")
-for f in pdf_files:
-    print(f"  {f} (exists: {os.path.isfile(f)})")
-
+# Step 1: Send initial email with the 7 converted reports
 try:
     valid_attachments = [f for f in pdf_files if os.path.isfile(f)]
-    print("\nSending email with these attachments:")
+    print("\nSending first email with initial reports:")
     for f in valid_attachments:
         print(f"  {f}")
     send_email_with_attachments(
         sender=GMAIL_ADDRESS,
         to=", ".join(GMAIL_RECIPIENTS),
-        subject="Automated DSD Reports",
-        body="""This is an automated email.
-
-Attached are the latest DSD reports as PDFs:
-1. SCP/KW in SC
-2. SCP in GA
-3. Tryon
-4. Cavalier
-5. List of Retail Stores
-""",
+        subject="Automated DSD Reports - Initial",
+        body="This is an automated email.\n\nAttached are the latest DSD reports.",
         attachments=valid_attachments
     )
-    print("\nEmail sent successfully.")
+    print("\nFirst email sent successfully.")
 except Exception as e:
-    print(f"\nFailed to send email: {e}")
+    print(f"\nFailed to send first email: {e}")
+
+# Step 2: Clear directory to prepare for EDA PDF generation
+print("Clearing directory for EDA report generation...")
+for f in os.listdir(storecounts.DOWNLOAD_DIR):
+    file_path = os.path.join(storecounts.DOWNLOAD_DIR, f)
+    try:
+        os.remove(file_path)
+    except Exception as error:
+        print(f"Failed to delete {file_path}: {error}")
+
+# Step 3: Run EDA report and send it in a separate email
+dashboard_url = "https://automatedanalytics.onrender.com/"
+try:
+    eda_pdf_path = run_eda_and_download_report(downloaded_files[1], dashboard_url, storecounts.DOWNLOAD_DIR)
+    if eda_pdf_path and os.path.isfile(eda_pdf_path):
+        print(f"EDA report generated: {eda_pdf_path}")
+        send_email_with_attachments(
+            sender=GMAIL_ADDRESS,
+            to=", ".join(GMAIL_RECIPIENTS),
+            subject="Automated DSD Report - EDA Analysis",
+            body="This is an automated email.\n\nAttached is the EDA report.",
+            attachments=[eda_pdf_path]
+        )
+        print("Second email with EDA sent successfully.")
+    else:
+        print("EDA report generation failed or timed out.")
+except Exception as e:
+    print(f"Failed during EDA report generation or email sending: {e}")
