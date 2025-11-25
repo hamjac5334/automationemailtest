@@ -15,9 +15,7 @@ from selenium.common.exceptions import (
 from webdriver_manager.chrome import ChromeDriverManager
 
 def clean_download_dir(download_dir):
-    for f in os.listdir(download_dir):
-        if f.endswith('.pdf'):
-            os.remove(os.path.join(download_dir, f))
+    pass
 
 def enable_chrome_headless_download(driver, download_dir):
     driver.execute_cdp_cmd(
