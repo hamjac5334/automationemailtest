@@ -103,7 +103,6 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         print(f"[ERROR] Dashboard analysis skipped: {input_csv!r} missing or invalid.")
         return None
 
-    # Clean ONLY inside this isolated EDA download directory before starting
     clean_download_dir(download_dir)
 
     options = webdriver.ChromeOptions()
@@ -125,16 +124,22 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         enable_chrome_headless_download(driver, download_dir)
 
-        print("[STEP] Waiting for dashboard branding in HTML...")
+        print("[STEP] Navigating to dashboard URL...")
         driver.get(dashboard_url)
+
+        print(f"[DEBUG] Page source length after get: {len(driver.page_source)}")
+
+        print("[STEP] Waiting for dashboard branding in HTML...")
         dashboard_ready = False
         for i in range(120):
             page_source = driver.page_source
+            print(f"[DEBUG] Branding check loop {i} snippet: {page_source[:500]!r}")
             if "Bogmayer Analytics Dashboard" in page_source or "Upload Dataset" in page_source:
                 dashboard_ready = True
                 print(f"[OK] Dashboard branding found at {i} seconds.")
                 break
             time.sleep(1)
+
         if not dashboard_ready:
             print("[ERROR] Dashboard branding not found after 120 seconds.")
             with open("dashboard_title_debug.html", "w") as f:
