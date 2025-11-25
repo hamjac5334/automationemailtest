@@ -25,6 +25,9 @@ REPORTS = [
 
 download_dir = storecounts.DOWNLOAD_DIR
 
+EDA_DIR = os.path.join(download_dir, "EDA")
+os.makedirs(EDA_DIR, exist_ok=True)
+
 # Download CSV reports
 print("Downloading reports...\n")
 downloaded_files = []
@@ -100,12 +103,14 @@ if (len(downloaded_files) > 1) and downloaded_files[1] and os.path.isfile(downlo
         eda_pdf_path = run_eda_and_download_report(downloaded_files[1], dashboard_url, download_dir)
         if eda_pdf_path and os.path.isfile(eda_pdf_path):
             today = datetime.now().strftime("%Y-%m-%d")
-            target_eda_pdf_path = os.path.abspath(os.path.join(download_dir, f"Report_{today}_EDA.pdf"))
-            # Only move if different paths
+            target_eda_pdf_path = os.path.abspath(os.path.join(EDA_DIR, f"Report_{today}_EDA.pdf"))
+            
+            #adjustment here
             if os.path.abspath(eda_pdf_path) != target_eda_pdf_path:
                 shutil.move(eda_pdf_path, target_eda_pdf_path)
             print(f"Appended EDA PDF: {target_eda_pdf_path}")
             pdf_files.append(target_eda_pdf_path)
+
         else:
             print("EDA PDF missing; not attached.")
     except Exception as e:
