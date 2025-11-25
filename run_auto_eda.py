@@ -74,9 +74,10 @@ def wait_for_pdf_file(download_dir, timeout=120):
     stable_since = None
     seen_files = set()
     while True:
+        downloading_files = [f for f in os.listdir(download_dir) if f.endswith('.crdownload')]
         pdf_files = [f for f in os.listdir(download_dir) if f.endswith('.pdf')]
         new_files = set(pdf_files) - seen_files
-        if pdf_files:
+        if pdf_files and len(downloading_files) == 0:
             for pf in new_files if new_files else pdf_files:
                 full_path = os.path.join(download_dir, pf)
                 size = os.path.getsize(full_path)
@@ -102,6 +103,9 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         print(f"[ERROR] Dashboard analysis skipped: {input_csv!r} missing or invalid.")
         return None
 
+    # Clean ONLY inside this isolated EDA download directory before starting
+    clean_download_dir(download_dir)
+
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
@@ -111,10 +115,10 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         "download.prompt_for_download": False,
         "download.directory_upgrade": True,
         "plugins.always_open_pdf_externally": True,
+        "profile.default_content_setting_values.automatic_downloads": 1,
     }
     options.add_experimental_option("prefs", prefs)
 
-    #clean_download_dir(download_dir)
     driver = None
     try:
         print(f"[STEP] Launching WebDriver for dashboard: {dashboard_url}")
