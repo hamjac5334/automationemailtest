@@ -23,6 +23,9 @@ REPORTS = [
     ("Store Counts 90 Days", "https://dsdlink.com/Home?DashboardID=100120&ReportID=23157734")
 ]
 
+EDA_DOWNLOAD_DIR = os.path.join(storecounts.DOWNLOAD_DIR, "EDA_Downloads")
+os.makedirs(EDA_DOWNLOAD_DIR, exist_ok=True)
+
 print("Downloading reports...\n")
 downloaded_files = []
 for i, (report_name, url) in enumerate(REPORTS, start=1):
@@ -82,18 +85,18 @@ for sc_csv in (storecounts_30_csv, storecounts_60_csv, storecounts_90_csv):
         except Exception as e:
             print(f"Failed to convert storecounts CSV {sc_csv} to PDF: {e}")
 
-# Run EDA report (dashboard automation) and append its PDF
+# Run EDA report (dashboard automation) in separate download dir and append its PDF
 dashboard_url = "https://automatedanalytics.onrender.com/"
 if (len(downloaded_files) > 1) and downloaded_files[1] and os.path.isfile(downloaded_files[1]):
     print(f"Preparing EDA analysis for {downloaded_files[1]}")
     try:
-        eda_pdf_path = run_eda_and_download_report(downloaded_files[1], dashboard_url, storecounts.DOWNLOAD_DIR)
+        eda_pdf_path = run_eda_and_download_report(downloaded_files[1], dashboard_url, EDA_DOWNLOAD_DIR)
         print(f"EDA output: {eda_pdf_path} (exists: {os.path.isfile(eda_pdf_path) if eda_pdf_path else 'N/A'})")
         if eda_pdf_path and os.path.isfile(eda_pdf_path):
             today = datetime.now().strftime("%Y-%m-%d")
             target_eda_pdf_name = f"Report_{today}_EDA.pdf"
             target_eda_pdf_path = os.path.join(storecounts.DOWNLOAD_DIR, target_eda_pdf_name)
-            shutil.move(eda_pdf_path, target_eda_pdf_path)
+            shutil.move(eda_pdf_path, target_eda_pdf_path)  # Move from EDA_DOWNLOAD_DIR to main folder
             pdf_files.append(target_eda_pdf_path)
             print(f"Appended EDA PDF: {target_eda_pdf_path}")
         else:
