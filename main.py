@@ -99,10 +99,17 @@ try:
 except Exception as e:
     print(f"\nFailed to send first email: {e}")
 
-# Step 2: Clear directory to prepare for EDA PDF generation
+# Preserve EDA input CSV path before clearing
+eda_input_csv = None
+if len(downloaded_files) > 1:
+    eda_input_csv = downloaded_files[1]
+
+# Step 2: Clear directory, but keep EDA input CSV intact
 print("Clearing directory for EDA report generation...")
 for f in os.listdir(storecounts.DOWNLOAD_DIR):
     file_path = os.path.join(storecounts.DOWNLOAD_DIR, f)
+    if eda_input_csv and os.path.abspath(file_path) == os.path.abspath(eda_input_csv):
+        continue
     try:
         os.remove(file_path)
     except Exception as error:
@@ -111,7 +118,7 @@ for f in os.listdir(storecounts.DOWNLOAD_DIR):
 # Step 3: Run EDA report and send it in a separate email
 dashboard_url = "https://automatedanalytics.onrender.com/"
 try:
-    eda_pdf_path = run_eda_and_download_report(downloaded_files[1], dashboard_url, storecounts.DOWNLOAD_DIR)
+    eda_pdf_path = run_eda_and_download_report(eda_input_csv, dashboard_url, storecounts.DOWNLOAD_DIR)
     if eda_pdf_path and os.path.isfile(eda_pdf_path):
         print(f"EDA report generated: {eda_pdf_path}")
         send_email_with_attachments(
@@ -126,3 +133,4 @@ try:
         print("EDA report generation failed or timed out.")
 except Exception as e:
     print(f"Failed during EDA report generation or email sending: {e}")
+
