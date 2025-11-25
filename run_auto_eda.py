@@ -156,7 +156,7 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
 
         print("[STEP] Directory after download click:", os.listdir(download_dir))
         print("[STEP] Waiting for PDF file to be fully downloaded...")
-        pdf_file = wait_for_pdf_file(download_dir, timeout=40)
+        pdf_file = wait_for_pdf_file(download_dir, timeout=90)
         if pdf_file:
             print(f"[SUCCESS] PDF downloaded and ready: {pdf_file}")
             return pdf_file
