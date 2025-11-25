@@ -67,7 +67,7 @@ def click_button_wait_enabled_with_retry(driver, by_locator, max_attempts=8, wai
     print(f"[ERROR] Failed to click button {by_locator} after {max_attempts} attempts")
     return False
 
-def wait_for_pdf_file(download_dir, timeout=40):
+def wait_for_pdf_file(download_dir, timeout=120):
     print(f"[STEP] Waiting for new PDF in {download_dir} (timeout={timeout}s)...")
     start_time = time.time()
     last_size = -1
@@ -156,7 +156,7 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
 
         print("[STEP] Directory after download click:", os.listdir(download_dir))
         print("[STEP] Waiting for PDF file to be fully downloaded...")
-        pdf_file = wait_for_pdf_file(download_dir, timeout=40)
+        pdf_file = wait_for_pdf_file(download_dir, timeout=120)
         if pdf_file:
             print(f"[SUCCESS] PDF downloaded and ready: {pdf_file}")
             return pdf_file
