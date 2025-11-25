@@ -15,8 +15,9 @@ from selenium.common.exceptions import (
 from webdriver_manager.chrome import ChromeDriverManager
 
 def clean_download_dir(download_dir):
+    """Optional: remove only EDA PDFs, if needed. Comment out if unnecessary."""
     for f in os.listdir(download_dir):
-        if f.endswith('.pdf'):
+        if f.startswith("full_report") and f.endswith('.pdf'):
             os.remove(os.path.join(download_dir, f))
 
 def enable_chrome_headless_download(driver, download_dir):
@@ -67,7 +68,7 @@ def click_button_wait_enabled_with_retry(driver, by_locator, max_attempts=8, wai
     print(f"[ERROR] Failed to click button {by_locator} after {max_attempts} attempts")
     return False
 
-def wait_for_pdf_file(download_dir, timeout=40):
+def wait_for_pdf_file(download_dir, timeout=120):
     print(f"[STEP] Waiting for new PDF in {download_dir} (timeout={timeout}s)...")
     start_time = time.time()
     last_size = -1
@@ -75,6 +76,7 @@ def wait_for_pdf_file(download_dir, timeout=40):
     seen_files = set()
     while True:
         pdf_files = [f for f in os.listdir(download_dir) if f.endswith('.pdf')]
+        print(f"[DEBUG] PDF files currently in download folder: {pdf_files}")
         new_files = set(pdf_files) - seen_files
         if pdf_files:
             for pf in new_files if new_files else pdf_files:
@@ -94,7 +96,7 @@ def wait_for_pdf_file(download_dir, timeout=40):
         if time.time() - start_time > timeout:
             print(f"[ERROR] Timed out waiting for PDF download in {download_dir}")
             return None
-        time.sleep(1)
+        time.sleep(5)
 
 def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
     print("[STEP] Starting EDA automation script.")
@@ -114,31 +116,28 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
     }
     options.add_experimental_option("prefs", prefs)
 
-    #clean_download_dir(download_dir)
     driver = None
     try:
         print(f"[STEP] Launching WebDriver for dashboard: {dashboard_url}")
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
         enable_chrome_headless_download(driver, download_dir)
 
-        print("[STEP] Waiting for dashboard branding in HTML...")
+        print("[STEP] Waiting for dashboard branding element...")
         driver.get(dashboard_url)
-        dashboard_ready = False
-        for i in range(120):
-            page_source = driver.page_source
-            if "Bogmayer Analytics Dashboard" in page_source or "Upload Dataset" in page_source:
-                dashboard_ready = True
-                print(f"[OK] Dashboard branding found at {i} seconds.")
-                break
-            time.sleep(1)
-        if not dashboard_ready:
-            print("[ERROR] Dashboard branding not found after 120 seconds.")
+
+        # Wait for specific key element instead of page title text
+        wait = WebDriverWait(driver, 180)
+        try:
+            # Replace 'dashboard-main' below with actual stable id/class of a dashboard element visible after full load
+            wait.until(EC.visibility_of_element_located((By.ID, "dashboard-main")))
+            print("[OK] Dashboard main element found - page loaded successfully.")
+        except TimeoutException:
+            print("[ERROR] Dashboard main element not found after 180 seconds.")
             with open("dashboard_title_debug.html", "w") as f:
                 f.write(driver.page_source[:20000])
             return None
 
         print("[STEP] Waiting for file input to be visible...")
-        wait = WebDriverWait(driver, 90)
         file_input = wait.until(EC.visibility_of_element_located((By.ID, "fileInput")))
         print("[OK] File input visible, sending file path.")
         file_input.send_keys(os.path.abspath(input_csv))
@@ -156,7 +155,7 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
 
         print("[STEP] Directory after download click:", os.listdir(download_dir))
         print("[STEP] Waiting for PDF file to be fully downloaded...")
-        pdf_file = wait_for_pdf_file(download_dir, timeout=90)
+        pdf_file = wait_for_pdf_file(download_dir, timeout=180)
         if pdf_file:
             print(f"[SUCCESS] PDF downloaded and ready: {pdf_file}")
             return pdf_file
