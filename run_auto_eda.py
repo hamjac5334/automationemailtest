@@ -67,18 +67,19 @@ def click_button_wait_enabled_with_retry(driver, by_locator, max_attempts=8, wai
     print(f"[ERROR] Failed to click button {by_locator} after {max_attempts} attempts")
     return False
 
-def wait_for_pdf_file(download_dir, timeout=120):
-    print(f"[STEP] Waiting for new PDF in {download_dir} (timeout={timeout}s)...")
+def wait_for_pdf_file(download_dir, known_files=None, timeout=120):
+    print(f"[STEP] Waiting for a new PDF in {download_dir} (timeout={timeout}s)...")
     start_time = time.time()
     last_size = -1
     stable_since = None
-    seen_files = set()
+    if known_files is None:
+        known_files = set(os.listdir(download_dir))
     while True:
         downloading_files = [f for f in os.listdir(download_dir) if f.endswith('.crdownload')]
         pdf_files = [f for f in os.listdir(download_dir) if f.endswith('.pdf')]
-        new_files = set(pdf_files) - seen_files
-        if pdf_files and len(downloading_files) == 0:
-            for pf in new_files if new_files else pdf_files:
+        new_pdfs = set(pdf_files) - known_files
+        if new_pdfs and len(downloading_files) == 0:
+            for pf in new_pdfs:
                 full_path = os.path.join(download_dir, pf)
                 size = os.path.getsize(full_path)
                 if size > 0:
@@ -86,16 +87,16 @@ def wait_for_pdf_file(download_dir, timeout=120):
                         if stable_since is None:
                             stable_since = time.time()
                         elif time.time() - stable_since > 2:
-                            print(f"[OK] PDF file stable and ready: {full_path}")
+                            print(f"[OK] New PDF stable and ready: {full_path}")
                             return full_path
                     else:
                         stable_since = None
                         last_size = size
-            seen_files.update(pdf_files)
         if time.time() - start_time > timeout:
             print(f"[ERROR] Timed out waiting for PDF download in {download_dir}")
             return None
         time.sleep(1)
+
 
 def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
     print("[STEP] Starting EDA automation script.")
@@ -156,6 +157,8 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         time.sleep(15)
 
         print("[STEP] Directory before download click:", os.listdir(download_dir))
+        existing_files = set(os.listdir(download_dir))
+
         print("[STEP] Clicking dashboard PDF trigger button by ID...")
         download_pdf_locator = (By.ID, "download-pdf")
         if not click_button_wait_enabled_with_retry(driver, download_pdf_locator):
@@ -163,9 +166,12 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
                 f.write(driver.page_source[:10000])
             return None
 
+        print("[INFO] Clicked download button, waiting 10 seconds for download to start...")
+        time.sleep(10)
+
         print("[STEP] Directory after download click:", os.listdir(download_dir))
         print("[STEP] Waiting for PDF file to be fully downloaded...")
-        pdf_file = wait_for_pdf_file(download_dir, timeout=120)
+        pdf_file = wait_for_pdf_file(download_dir, known_files=existing_files, timeout=120)
         if pdf_file:
             print(f"[SUCCESS] PDF downloaded and ready: {pdf_file}")
             return pdf_file
@@ -184,3 +190,4 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         print("[STEP] Quitting WebDriver.")
         if driver is not None:
             driver.quit()
+
