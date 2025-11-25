@@ -108,11 +108,10 @@ if (len(downloaded_files) > 1) and downloaded_files[1] and os.path.isfile(downlo
                 shutil.copy(pdf_files[1], target_eda_pdf_path)  # copy Brand Performance PDF as fallback
                 pdf_files.append(target_eda_pdf_path)
                 print(f"[FALLBACK] Appended fallback EDA PDF: {target_eda_pdf_path}")
-        
-            except Exception as e:
-                print(f"Failed to run dashboard analysis: {e}")
-        else:
-            print("No valid target CSV for dashboard EDA; skipping.")
+    except Exception as e:
+        print(f"Failed to run dashboard analysis: {e}")
+else:
+    print("No valid target CSV for dashboard EDA; skipping.")
 
 print("\nFinal list of PDFs to attach:")
 for f in pdf_files:
