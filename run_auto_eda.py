@@ -15,9 +15,15 @@ from selenium.common.exceptions import (
 from webdriver_manager.chrome import ChromeDriverManager
 
 def clean_download_dir(download_dir):
+    """Only remove dashboard-related PDFs, not all PDFs"""
     for f in os.listdir(download_dir):
-        if f.endswith('.pdf'):
-            os.remove(os.path.join(download_dir, f))
+        # Only remove files that look like dashboard reports
+        if f.endswith('.pdf') and ('dashboard' in f.lower() or 'report' in f.lower()):
+            try:
+                os.remove(os.path.join(download_dir, f))
+                print(f"[INFO] Removed old dashboard PDF: {f}")
+            except Exception as e:
+                print(f"[WARN] Could not remove {f}: {e}")
 
 def enable_chrome_headless_download(driver, download_dir):
     driver.execute_cdp_cmd(
@@ -104,6 +110,7 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         print(f"[ERROR] Dashboard analysis skipped: {input_csv!r} missing or invalid.")
         return None
 
+    # Only clean old dashboard PDFs, not all PDFs
     clean_download_dir(download_dir)
 
     options = webdriver.ChromeOptions()
@@ -190,4 +197,3 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         print("[STEP] Quitting WebDriver.")
         if driver is not None:
             driver.quit()
-
