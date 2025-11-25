@@ -67,7 +67,7 @@ def click_button_wait_enabled_with_retry(driver, by_locator, max_attempts=8, wai
     print(f"[ERROR] Failed to click button {by_locator} after {max_attempts} attempts")
     return False
 
-def wait_for_pdf_file(download_dir, known_files=None, timeout=120):
+def wait_for_pdf_file(download_dir, known_files=None, timeout=180):
     print(f"[STEP] Waiting for a new PDF in {download_dir} (timeout={timeout}s)...")
     start_time = time.time()
     last_size = -1
@@ -132,7 +132,7 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
 
         print("[STEP] Waiting for dashboard branding in HTML...")
         dashboard_ready = False
-        for i in range(120):
+        for i in range(180):
             page_source = driver.page_source
             print(f"[DEBUG] Branding check loop {i} snippet: {page_source[:500]!r}")
             if "Bogmayer Analytics Dashboard" in page_source or "Upload Dataset" in page_source:
@@ -142,7 +142,7 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
             time.sleep(1)
 
         if not dashboard_ready:
-            print("[ERROR] Dashboard branding not found after 120 seconds.")
+            print("[ERROR] Dashboard branding not found after 180 seconds.")
             with open("dashboard_title_debug.html", "w") as f:
                 f.write(driver.page_source[:20000])
             return None
