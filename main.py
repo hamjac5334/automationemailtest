@@ -1,4 +1,3 @@
-
 import os
 from dsd_downloader import download_report
 from gmail_utils import send_email_with_attachments
@@ -60,11 +59,14 @@ storecounts_90_csv = next((f for f in downloaded_files if f and f.endswith('_7.c
 # This prevents clean_download_dir() from deleting the converted PDFs
 # ============================================================================
 
-# Run EDA report (dashboard automation) FIRST
+# Run EDA report (dashboard automation) FIRST - with better error handling
 dashboard_url = "https://automatedanalytics.onrender.com/"
 eda_pdf_path = None
-if (len(downloaded_files) > 1) and downloaded_files[1] and os.path.isfile(downloaded_files[1]):
-    print(f"\nPreparing EDA analysis for {downloaded_files[1]}")
+
+# Use Weekly Volume report (index 2, which is the 3rd file)
+if len(downloaded_files) > 2 and downloaded_files[2] and os.path.isfile(downloaded_files[2]):
+    print(f"\nPreparing EDA analysis for {downloaded_files[2]}")
+    print("Note: Dashboard may take 1-2 minutes to wake up if it's on Render free tier...")
     try:
         eda_pdf_path = run_eda_and_download_report(downloaded_files[2], dashboard_url, storecounts.DOWNLOAD_DIR)
         print(f"EDA output: {eda_pdf_path} (exists: {os.path.isfile(eda_pdf_path) if eda_pdf_path else 'N/A'})")
@@ -73,13 +75,14 @@ if (len(downloaded_files) > 1) and downloaded_files[1] and os.path.isfile(downlo
             target_eda_pdf_name = f"Report_{today}_EDA.pdf"
             target_eda_pdf_path = os.path.join(storecounts.DOWNLOAD_DIR, target_eda_pdf_name)
             shutil.move(eda_pdf_path, target_eda_pdf_path)
-            eda_pdf_path = target_eda_pdf_path  # Update reference
-            print(f"Renamed EDA PDF: {target_eda_pdf_path}")
+            eda_pdf_path = target_eda_pdf_path
+            print(f"✓ Renamed EDA PDF: {target_eda_pdf_path}")
         else:
-            print("EDA PDF file missing; will skip in attachments.")
+            print("✗ EDA PDF file missing; continuing without it.")
             eda_pdf_path = None
     except Exception as e:
-        print(f"Failed to run dashboard analysis: {e}")
+        print(f"✗ Failed to run dashboard analysis: {e}")
+        print("  Continuing with remaining reports...")
         eda_pdf_path = None
 else:
     print("\nNo valid target CSV for dashboard EDA; skipping.")
@@ -117,7 +120,7 @@ for sc_csv in (storecounts_30_csv, storecounts_60_csv, storecounts_90_csv):
 # Add EDA PDF to the list if it exists
 if eda_pdf_path and os.path.isfile(eda_pdf_path):
     pdf_files.append(eda_pdf_path)
-    print(f"Appended EDA PDF: {eda_pdf_path}")
+    print(f"✓ Appended EDA PDF: {eda_pdf_path}")
 
 # Debug output
 print("\n=== DEBUGGING PDF FILES ===")
@@ -139,13 +142,14 @@ for f in pdf_files:
 
 try:
     valid_attachments = [f for f in pdf_files if os.path.isfile(f)]
-    print(f"\nFound {len(valid_attachments)} valid PDF attachments")
-    print("\nSending email with these attachments:")
-    for f in valid_attachments:
-        print(f"  {f}")
+    print(f"\n✓ Found {len(valid_attachments)} valid PDF attachments")
     
     if not valid_attachments:
         print("\n[ERROR] No valid PDF attachments found! Email will be sent without attachments.")
+    else:
+        print("\nSending email with these attachments:")
+        for f in valid_attachments:
+            print(f"  {f}")
     
     send_email_with_attachments(
         sender=GMAIL_ADDRESS,
@@ -162,8 +166,8 @@ Attached are the latest DSD reports as PDFs:
 """,
         attachments=valid_attachments
     )
-    print("\nEmail sent successfully.")
+    print("\n✓ Email sent successfully.")
 except Exception as e:
-    print(f"\nFailed to send email: {e}")
+    print(f"\n✗ Failed to send email: {e}")
     import traceback
     traceback.print_exc()
