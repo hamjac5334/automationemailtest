@@ -66,7 +66,7 @@ eda_pdf_path = None
 if (len(downloaded_files) > 1) and downloaded_files[1] and os.path.isfile(downloaded_files[1]):
     print(f"\nPreparing EDA analysis for {downloaded_files[1]}")
     try:
-        eda_pdf_path = run_eda_and_download_report(downloaded_files[1], dashboard_url, storecounts.DOWNLOAD_DIR)
+        eda_pdf_path = run_eda_and_download_report(downloaded_files[2], dashboard_url, storecounts.DOWNLOAD_DIR)
         print(f"EDA output: {eda_pdf_path} (exists: {os.path.isfile(eda_pdf_path) if eda_pdf_path else 'N/A'})")
         if eda_pdf_path and os.path.isfile(eda_pdf_path):
             today = datetime.now().strftime("%Y-%m-%d")
