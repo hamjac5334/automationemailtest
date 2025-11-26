@@ -63,12 +63,12 @@ storecounts_90_csv = next((f for f in downloaded_files if f and f.endswith('_7.c
 dashboard_url = "https://automatedanalytics.onrender.com/"
 eda_pdf_path = None
 
-# Use Weekly Volume report (index 0, which is the 1st file)
-if len(downloaded_files) > 1 and downloaded_files[0] and os.path.isfile(downloaded_files[0]):
+# Use Sales Summary report (index 0, which is the 1st file)
+if len(downloaded_files) > 0 and downloaded_files[0] and os.path.isfile(downloaded_files[0]):
     print(f"\nPreparing EDA analysis for {downloaded_files[0]}")
     print("Note: Dashboard may take 1-2 minutes to wake up if it's on Render free tier...")
     try:
-        eda_pdf_path = run_eda_and_download_report(downloaded_files[2], dashboard_url, storecounts.DOWNLOAD_DIR)
+        eda_pdf_path = run_eda_and_download_report(downloaded_files[0], dashboard_url, storecounts.DOWNLOAD_DIR)
         print(f"EDA output: {eda_pdf_path} (exists: {os.path.isfile(eda_pdf_path) if eda_pdf_path else 'N/A'})")
         if eda_pdf_path and os.path.isfile(eda_pdf_path):
             today = datetime.now().strftime("%Y-%m-%d")
@@ -142,7 +142,7 @@ for f in pdf_files:
 
 try:
     valid_attachments = [f for f in pdf_files if os.path.isfile(f)]
-    print(f"\n✓ Found {len(valid_attachments)} valid PDF attachments")
+    print(f"\n Found {len(valid_attachments)} valid PDF attachments")
     
     if not valid_attachments:
         print("\n[ERROR] No valid PDF attachments found! Email will be sent without attachments.")
@@ -166,8 +166,6 @@ Attached are the latest DSD reports as PDFs:
 """,
         attachments=valid_attachments
     )
-    print("\n✓ Email sent successfully.")
+    print("\n Email sent successfully.")
 except Exception as e:
     print(f"\n✗ Failed to send email: {e}")
-    import traceback
-    traceback.print_exc()
