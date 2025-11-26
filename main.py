@@ -63,9 +63,9 @@ storecounts_90_csv = next((f for f in downloaded_files if f and f.endswith('_7.c
 dashboard_url = "https://automatedanalytics.onrender.com/"
 eda_pdf_path = None
 
-# Use Weekly Volume report (index 2, which is the 3rd file)
-if len(downloaded_files) > 2 and downloaded_files[2] and os.path.isfile(downloaded_files[2]):
-    print(f"\nPreparing EDA analysis for {downloaded_files[2]}")
+# Use Weekly Volume report (index 0, which is the 1st file)
+if len(downloaded_files) > 1 and downloaded_files[0] and os.path.isfile(downloaded_files[0]):
+    print(f"\nPreparing EDA analysis for {downloaded_files[0]}")
     print("Note: Dashboard may take 1-2 minutes to wake up if it's on Render free tier...")
     try:
         eda_pdf_path = run_eda_and_download_report(downloaded_files[2], dashboard_url, storecounts.DOWNLOAD_DIR)
