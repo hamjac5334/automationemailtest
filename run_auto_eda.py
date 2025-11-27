@@ -14,6 +14,16 @@ from selenium.common.exceptions import (
 )
 from webdriver_manager.chrome import ChromeDriverManager
 
+def clean_download_dir(download_dir):
+    """Remove old PDFs to avoid confusion"""
+    for f in os.listdir(download_dir):
+        if f.endswith('.pdf'):
+            try:
+                os.remove(os.path.join(download_dir, f))
+                print(f"[CLEANUP] Removed old PDF: {f}")
+            except Exception as e:
+                print(f"[WARN] Could not remove {f}: {e}")
+
 def enable_chrome_headless_download(driver, download_dir):
     """Enable downloads in headless Chrome"""
     driver.execute_cdp_cmd(
@@ -31,39 +41,47 @@ def remove_overlays(driver):
         driver.execute_script(script)
     print("[INFO] Removed possible blocking overlays.")
 
-def wait_for_pdf_ready_indicator(driver, timeout=120):
-    """Wait for the PDF ready indicator to appear"""
-    print("[STEP] Waiting for PDF ready indicator...")
-    start_time = time.time()
-    
-    while time.time() - start_time < timeout:
+def click_button_wait_enabled_with_retry(driver, by_locator, max_attempts=8, wait_seconds=3):
+    """Click a button with retry logic"""
+    for attempt in range(max_attempts):
         try:
-            # Check if the status div contains "PDF generation ready"
-            status_text = driver.execute_script("""
-                const statusDiv = document.getElementById('pdf-status');
-                if (statusDiv && !statusDiv.classList.contains('d-none')) {
-                    return statusDiv.textContent;
-                }
-                return null;
-            """)
+            wait = WebDriverWait(driver, 30)
+            wait.until(EC.presence_of_element_located(by_locator))
+            element = driver.find_element(*by_locator)
             
-            if status_text and "ready" in status_text.lower():
-                print(f"[OK] PDF ready indicator found: '{status_text}'")
+            # Wait for button to be enabled
+            for enabled_wait in range(40):
+                if element.is_enabled():
+                    break
+                print(f"[INFO] Button {by_locator} is disabled, waiting...")
+                time.sleep(1)
+                element = driver.find_element(*by_locator)
+            
+            if not element.is_enabled():
+                print(f"[WARN] Button {by_locator} still disabled after 40s, retrying...")
+                continue
+            
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+            time.sleep(1)
+            
+            try:
+                element.click()
+                print(f"[OK] Clicked button {by_locator} on attempt {attempt+1}")
                 return True
-            
-            elapsed = int(time.time() - start_time)
-            if elapsed % 10 == 0 and elapsed > 0:
-                print(f"[INFO] Still waiting for PDF ready indicator... ({elapsed}s)")
-            
-            time.sleep(2)
+            except ElementClickInterceptedException as e:
+                print(f"[WARN] Intercepted, JS click fallback: {e}")
+                remove_overlays(driver)
+                driver.execute_script("arguments[0].click();", element)
+                print(f"[OK] JS click fallback succeeded for button {by_locator} attempt {attempt+1}")
+                return True
         except Exception as e:
-            print(f"[WARN] Error checking PDF ready status: {e}")
-            time.sleep(2)
+            print(f"[WARN] Click attempt {attempt+1} for {by_locator} failed: {e}")
+            time.sleep(wait_seconds)
     
-    print(f"[WARN] PDF ready indicator timeout after {timeout}s, proceeding anyway")
+    print(f"[ERROR] Failed to click button {by_locator} after {max_attempts} attempts")
     return False
 
-def wait_for_pdf_file(download_dir, timeout=240):
+def wait_for_pdf_file(download_dir, timeout=180):
     """Wait for a new PDF file to appear and stabilize"""
     print(f"[STEP] Waiting for new PDF in {download_dir} (timeout={timeout}s)...")
     start_time = time.time()
@@ -73,7 +91,7 @@ def wait_for_pdf_file(download_dir, timeout=240):
     print(f"[DEBUG] Initial PDFs in directory: {initial_pdfs}")
     
     last_size = {}
-    stable_threshold = 3  # seconds for file size to remain stable
+    stable_threshold = 3  # seconds
     
     while time.time() - start_time < timeout:
         current_pdfs = set(f for f in os.listdir(download_dir) if f.endswith('.pdf'))
@@ -89,20 +107,14 @@ def wait_for_pdf_file(download_dir, timeout=240):
                         if pdf_name in last_size:
                             if last_size[pdf_name]['size'] == size:
                                 if time.time() - last_size[pdf_name]['time'] > stable_threshold:
-                                    print(f"[OK] PDF file stable and ready: {full_path} ({size} bytes)")
+                                    print(f"[OK] PDF file stable and ready: {full_path}")
                                     return full_path
                         else:
                             last_size[pdf_name] = {'size': size, 'time': time.time()}
-                            print(f"[DEBUG] New PDF detected: {pdf_name} ({size} bytes)")
                     else:
                         last_size[pdf_name] = {'size': size, 'time': time.time()}
                 except OSError:
                     continue
-        
-        # Log progress every 15 seconds
-        elapsed = int(time.time() - start_time)
-        if elapsed % 15 == 0 and elapsed > 0:
-            print(f"[INFO] Still waiting for PDF download... ({elapsed}s elapsed)")
         
         time.sleep(1)
     
@@ -124,31 +136,30 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
     
-    os.makedirs(download_dir, exist_ok=True)
-    abs_download_dir = os.path.abspath(download_dir)
-    
     prefs = {
-        "download.default_directory": abs_download_dir,
+        "download.default_directory": os.path.abspath(download_dir),
         "download.prompt_for_download": False,
         "download.directory_upgrade": True,
         "plugins.always_open_pdf_externally": True,
         "profile.default_content_settings.popups": 0,
-        "safebrowsing.enabled": False,
     }
     options.add_experimental_option("prefs", prefs)
+
+    # Clean old PDFs before starting
+    clean_download_dir(download_dir)
     
     driver = None
     try:
         print(f"[STEP] Launching WebDriver for dashboard: {dashboard_url}")
         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        enable_chrome_headless_download(driver, abs_download_dir)
+        enable_chrome_headless_download(driver, download_dir)
 
         print("[STEP] Waiting for dashboard to load (may take 1-2 min on Render free tier)...")
         driver.get(dashboard_url)
         
-        # Wait for dashboard to load
+        # Wait for dashboard branding with extended timeout
         dashboard_ready = False
-        for i in range(240):
+        for i in range(240):  # 4 minutes timeout
             page_source = driver.page_source
             if "Bogmayer Analytics Dashboard" in page_source or "Upload Dataset" in page_source:
                 dashboard_ready = True
@@ -168,55 +179,24 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         print("[OK] File input visible, uploading CSV.")
         file_input.send_keys(os.path.abspath(input_csv))
 
-        # CRITICAL: Wait for backend analysis AND PDF generation to be ready
-        print("[STEP] Waiting for backend to complete analysis and visualization generation...")
-        print("[INFO] This includes: data processing, creating charts, and preparing PDF endpoint")
-        
-        # Wait for the PDF ready indicator
-        wait_for_pdf_ready_indicator(driver, timeout=120)
-        
-        # Additional small buffer to ensure everything is truly ready
-        print("[STEP] Adding 5-second buffer for final stabilization...")
-        time.sleep(5)
+        print("[STEP] Waiting for backend analysis to complete (~20-30s)...")
+        time.sleep(25)  # Give more time for analysis
 
-        print("[STEP] Checking download button state...")
-        try:
-            button_state = driver.execute_script("""
-                const btn = document.getElementById('download-pdf');
-                if (btn) {
-                    return {
-                        exists: true,
-                        disabled: btn.disabled || btn.classList.contains('btn-loading'),
-                        visible: btn.offsetParent !== null,
-                        text: btn.textContent.trim()
-                    };
-                }
-                return {exists: false};
-            """)
-            print(f"[DEBUG] Button state: {button_state}")
-        except Exception as e:
-            print(f"[WARN] Could not check button state: {e}")
+        print("[STEP] Directory before download click:", os.listdir(download_dir))
+        print("[STEP] Attempting to click PDF download button...")
+        download_pdf_locator = (By.ID, "download-pdf")
+        
+        if not click_button_wait_enabled_with_retry(driver, download_pdf_locator):
+            print("[ERROR] Failed to click download button")
+            with open("dashboard_pdf_click_fail.html", "w") as f:
+                f.write(driver.page_source[:10000])
+            return None
 
-        print("[STEP] Clicking PDF download button...")
-        download_button = driver.find_element(By.ID, "download-pdf")
+        print("[STEP] Download button clicked, waiting for file...")
+        time.sleep(3)  # Give browser time to initiate download
+        print("[STEP] Directory after download click:", os.listdir(download_dir))
         
-        # Scroll button into view and click
-        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", download_button)
-        time.sleep(1)
-        
-        try:
-            download_button.click()
-            print("[OK] Download button clicked successfully")
-        except ElementClickInterceptedException:
-            print("[WARN] Click intercepted, using JavaScript click...")
-            remove_overlays(driver)
-            driver.execute_script("arguments[0].click();", download_button)
-            print("[OK] JavaScript click successful")
-
-        print("[STEP] Waiting for PDF file to download...")
-        print("[INFO] PDF generation may take 30-90 seconds depending on data complexity")
-        
-        # Wait for PDF with extended timeout (PDF generation happens on button click)
+        # Wait for PDF with increased timeout
         pdf_file = wait_for_pdf_file(download_dir, timeout=180)
         
         if pdf_file:
@@ -224,36 +204,20 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
             return pdf_file
         else:
             print("[ERROR] PDF download failed or timed out.")
-            
-            # Check if there was an error message on the page
+            # Try to get any error messages from the page
             try:
-                error_msg = driver.execute_script("""
-                    const statusDiv = document.getElementById('pdf-status');
-                    if (statusDiv && statusDiv.textContent.includes('failed')) {
-                        return statusDiv.textContent;
-                    }
-                    return null;
-                """)
-                if error_msg:
-                    print(f"[ERROR] Page error message: {error_msg}")
+                body_text = driver.find_element(By.TAG_NAME, "body").text
+                print(f"[DEBUG] Page content snippet: {body_text[:500]}")
             except:
                 pass
-            
-            # Save page source for debugging
-            with open("dashboard_error_detailed.html", "w") as f:
-                f.write(driver.page_source)
-            print("[DEBUG] Saved page source to dashboard_error_detailed.html")
             return None
 
     except Exception as e:
         print(f"[FATAL ERROR] Automation error: {repr(e)}")
         traceback.print_exc()
         if driver is not None:
-            try:
-                with open("dashboard_exception.html", "w") as f:
-                    f.write(driver.page_source)
-            except:
-                pass
+            with open("dashboard_error.html", "w") as f:
+                f.write(driver.page_source[:10000])
         return None
     finally:
         print("[STEP] Quitting WebDriver.")
