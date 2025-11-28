@@ -10,7 +10,6 @@ import storecounts
 USERNAME = os.environ.get("DSD_USERNAME")
 PASSWORD = os.environ.get("DSD_PASSWORD")
 GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
-#,"mason.holland@hollandplace.net", "chad.elkins@tapsandtables.net"
 GMAIL_RECIPIENTS = ["jackson@bogmayer.com"]
 
 REPORTS = [
@@ -59,19 +58,16 @@ storecounts_60_csv = next((f for f in downloaded_files if f and f.endswith('_6.c
 storecounts_90_csv = next((f for f in downloaded_files if f and f.endswith('_7.csv')), None)
 
 # ============================================================================
-# RUN EDA ON THE ADJUSTED/MERGED DATA (combined_storecounts.csv)
+# RUN EDA ON THE FIRST REPORT (Sales Summary) - AFTER merge but BEFORE PDF conversion
 # ============================================================================
 
 dashboard_url = "https://automatedanalytics.onrender.com/"
 eda_pdf_path = None
 
-# Use the COMBINED storecounts file (after adjustments/merging)
-target_csv_for_eda = combined_storecounts_path if combined_storecounts_path and os.path.isfile(combined_storecounts_path) else None
-
-# Fallback to Sales Summary if combined storecounts doesn't exist
-if not target_csv_for_eda and len(downloaded_files) > 0 and downloaded_files[0] and os.path.isfile(downloaded_files[0]):
+# Use the first report (Sales Summary) for EDA
+target_csv_for_eda = None
+if len(downloaded_files) > 0 and downloaded_files[0] and os.path.isfile(downloaded_files[0]):
     target_csv_for_eda = downloaded_files[0]
-    print("\nUsing Sales Summary as EDA target (combined storecounts not available)")
 
 if target_csv_for_eda:
     print(f"\nPreparing EDA analysis for {target_csv_for_eda}")
