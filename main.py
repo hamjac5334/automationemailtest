@@ -75,6 +75,19 @@ if not target_csv_for_eda and len(downloaded_files) > 0 and downloaded_files[0] 
 
 if target_csv_for_eda:
     print(f"\nPreparing EDA analysis for {target_csv_for_eda}")
+    
+    # Debug: Print all column names before running EDA
+    try:
+        import pandas as pd
+        debug_df = pd.read_csv(target_csv_for_eda)
+        print("\n=== DEBUG: Column Names ===")
+        print(f"Total columns: {len(debug_df.columns)}")
+        for i, col in enumerate(debug_df.columns, 1):
+            print(f"  {i}. {col}")
+        print("=== END Column Names ===\n")
+    except Exception as e:
+        print(f"Warning: Could not read columns for debugging: {e}\n")
+    
     print("Note: Dashboard may take 1-2 minutes to wake up if it's on Render free tier...")
     try:
         eda_pdf_path = run_eda_and_download_report(target_csv_for_eda, dashboard_url, storecounts.DOWNLOAD_DIR)
