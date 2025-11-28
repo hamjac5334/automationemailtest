@@ -42,11 +42,15 @@ if len(downloaded_files) < len(REPORTS):
 
 expected_storecounts = ['_5.csv', '_6.csv', '_7.csv']
 storecount_files = [f for f in downloaded_files if any(f and f.endswith(s) for s in expected_storecounts)]
+
+# Merge storecounts if all 3 files are present
+combined_storecounts_path = None
 if len(storecount_files) == 3:
     merged_storecounts_df = storecounts.merge_three_storecounts_reports()
     combined_storecounts_path = os.path.join(storecounts.DOWNLOAD_DIR, "combined_storecounts.csv")
     merged_storecounts_df.to_csv(combined_storecounts_path, index=False)
     set_storecounts_path(combined_storecounts_path)
+    print(f"✓ Merged storecounts saved to: {combined_storecounts_path}")
 else:
     print("Warning: Missing one or more storecounts files; skipping merge.")
 
@@ -55,20 +59,25 @@ storecounts_60_csv = next((f for f in downloaded_files if f and f.endswith('_6.c
 storecounts_90_csv = next((f for f in downloaded_files if f and f.endswith('_7.csv')), None)
 
 # ============================================================================
-# CRITICAL FIX: Run EDA FIRST before converting CSVs to PDFs
-# This prevents clean_download_dir() from deleting the converted PDFs
+# RUN EDA ON THE ADJUSTED/MERGED DATA (combined_storecounts.csv)
 # ============================================================================
 
-# Run EDA report (dashboard automation) FIRST - with better error handling
 dashboard_url = "https://automatedanalytics.onrender.com/"
 eda_pdf_path = None
 
-# Use Sales Summary report (index 0, which is the 1st file)
-if len(downloaded_files) > 0 and downloaded_files[0] and os.path.isfile(downloaded_files[0]):
-    print(f"\nPreparing EDA analysis for {downloaded_files[0]}")
+# Use the COMBINED storecounts file (after adjustments/merging)
+target_csv_for_eda = combined_storecounts_path if combined_storecounts_path and os.path.isfile(combined_storecounts_path) else None
+
+# Fallback to Sales Summary if combined storecounts doesn't exist
+if not target_csv_for_eda and len(downloaded_files) > 0 and downloaded_files[0] and os.path.isfile(downloaded_files[0]):
+    target_csv_for_eda = downloaded_files[0]
+    print("\nUsing Sales Summary as EDA target (combined storecounts not available)")
+
+if target_csv_for_eda:
+    print(f"\nPreparing EDA analysis for {target_csv_for_eda}")
     print("Note: Dashboard may take 1-2 minutes to wake up if it's on Render free tier...")
     try:
-        eda_pdf_path = run_eda_and_download_report(downloaded_files[0], dashboard_url, storecounts.DOWNLOAD_DIR)
+        eda_pdf_path = run_eda_and_download_report(target_csv_for_eda, dashboard_url, storecounts.DOWNLOAD_DIR)
         print(f"EDA output: {eda_pdf_path} (exists: {os.path.isfile(eda_pdf_path) if eda_pdf_path else 'N/A'})")
         if eda_pdf_path and os.path.isfile(eda_pdf_path):
             today = datetime.now().strftime("%Y-%m-%d")
