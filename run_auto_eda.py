@@ -180,12 +180,29 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
 
         print("[STEP] Waiting for file input to be visible...")
         wait = WebDriverWait(driver, 90)
-        file_input = wait.until(EC.visibility_of_element_located((By.ID, "fileInput")))
-        print("[OK] File input visible, uploading CSV.")
+        file_input = wait.until(EC.presence_of_element_located((By.ID, "fileInput")))
+        print("[OK] File input found, uploading CSV.")
         file_input.send_keys(os.path.abspath(input_csv))
-
+        
+        print("[STEP] Waiting for upload to process and analysis to complete...")
+        # Wait for the data to actually appear on the page (proof of upload)
+        time.sleep(5)
+        
+        # Check if data preview is visible (means upload succeeded)
+        try:
+            data_preview = driver.find_element(By.ID, "data-preview")
+            if data_preview and data_preview.is_displayed():
+                print("[OK] Data preview visible - upload successful!")
+            else:
+                print("[WARN] Data preview not visible yet, waiting longer...")
+                time.sleep(10)
+        except NoSuchElementException:
+            print("[WARN] Could not find data preview element, waiting extra time...")
+            time.sleep(10)
+        
+        # Wait for analysis to complete
         print("[STEP] Waiting for backend analysis to complete (~30-40s)...")
-        time.sleep(35)  # Increased wait time for analysis
+        time.sleep(35)
 
         print("[STEP] Directory before download click:", sorted(os.listdir(download_dir)))
         print("[STEP] Attempting to click PDF download button...")
