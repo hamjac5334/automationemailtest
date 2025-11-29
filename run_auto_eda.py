@@ -71,30 +71,38 @@ def click_button_wait_enabled_with_retry(driver, by_locator, max_attempts=8, wai
     print(f"[ERROR] Failed to click button {by_locator} after {max_attempts} attempts")
     return False
 
-def wait_for_pdf_file(download_dir, timeout=180):
-    """Wait for a new PDF file to appear and stabilize"""
+def wait_for_pdf_file(download_dir, timeout=300):
+    """Wait for a new PDF file to appear and stabilize - increased timeout to 300s"""
     print(f"[STEP] Waiting for new PDF in {download_dir} (timeout={timeout}s)...")
     start_time = time.time()
     
     # Get initial PDFs to exclude (only exclude temp files, keep dated reports)
     initial_files = set(os.listdir(download_dir))
     print(f"[DEBUG] Initial files in directory: {len(initial_files)} files")
+    print(f"[DEBUG] Initial files: {sorted(initial_files)}")
     
     last_size = {}
     stable_threshold = 3  # seconds
     
     while time.time() - start_time < timeout:
+        elapsed = int(time.time() - start_time)
         current_files = set(os.listdir(download_dir))
         new_files = current_files - initial_files
+        
+        # Print progress every 10 seconds
+        if elapsed % 10 == 0 and elapsed > 0:
+            print(f"[DEBUG] Still waiting... {elapsed}s elapsed. New files: {len(new_files)}")
         
         # Look for new PDF files
         new_pdfs = [f for f in new_files if f.endswith('.pdf')]
         
         if new_pdfs:
+            print(f"[DEBUG] Found new PDF files: {new_pdfs}")
             for pdf_name in new_pdfs:
                 full_path = os.path.join(download_dir, pdf_name)
                 try:
                     size = os.path.getsize(full_path)
+                    print(f"[DEBUG] PDF {pdf_name} current size: {size} bytes")
                     if size > 0:
                         # Check if size is stable
                         if pdf_name in last_size:
@@ -102,17 +110,22 @@ def wait_for_pdf_file(download_dir, timeout=180):
                                 if time.time() - last_size[pdf_name]['time'] > stable_threshold:
                                     print(f"[OK] PDF file stable and ready: {full_path}")
                                     return full_path
+                            else:
+                                print(f"[DEBUG] PDF size changed from {last_size[pdf_name]['size']} to {size}")
+                                last_size[pdf_name] = {'size': size, 'time': time.time()}
                         else:
+                            print(f"[DEBUG] First size check for {pdf_name}: {size} bytes")
                             last_size[pdf_name] = {'size': size, 'time': time.time()}
                     else:
                         last_size[pdf_name] = {'size': size, 'time': time.time()}
-                except OSError:
+                except OSError as e:
+                    print(f"[DEBUG] OSError reading {pdf_name}: {e}")
                     continue
         
         time.sleep(1)
     
     print(f"[ERROR] Timed out waiting for PDF download in {download_dir}")
-    print(f"[DEBUG] Final directory contents: {os.listdir(download_dir)}")
+    print(f"[DEBUG] Final directory contents: {sorted(os.listdir(download_dir))}")
     return None
 
 def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
@@ -171,10 +184,10 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         print("[OK] File input visible, uploading CSV.")
         file_input.send_keys(os.path.abspath(input_csv))
 
-        print("[STEP] Waiting for backend analysis to complete (~20-30s)...")
-        time.sleep(25)  # Give more time for analysis
+        print("[STEP] Waiting for backend analysis to complete (~30-40s)...")
+        time.sleep(35)  # Increased wait time for analysis
 
-        print("[STEP] Directory before download click:", os.listdir(download_dir))
+        print("[STEP] Directory before download click:", sorted(os.listdir(download_dir)))
         print("[STEP] Attempting to click PDF download button...")
         download_pdf_locator = (By.ID, "download-pdf")
         
@@ -185,11 +198,21 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
             return None
 
         print("[STEP] Download button clicked, waiting for file...")
-        time.sleep(3)  # Give browser time to initiate download
-        print("[STEP] Directory after download click:", os.listdir(download_dir))
         
-        # Wait for PDF with increased timeout
-        pdf_file = wait_for_pdf_file(download_dir, timeout=180)
+        # Debug: Check browser download status
+        print("[DEBUG] Checking for download in progress...")
+        time.sleep(5)
+        
+        try:
+            user_agent = driver.execute_script("return window.navigator.userAgent")
+            print(f"[DEBUG] User agent: {user_agent}")
+        except Exception as e:
+            print(f"[DEBUG] Could not check user agent: {e}")
+        
+        print("[STEP] Directory after download click:", sorted(os.listdir(download_dir)))
+        
+        # Wait for PDF with increased timeout (300 seconds = 5 minutes)
+        pdf_file = wait_for_pdf_file(download_dir, timeout=300)
         
         if pdf_file:
             print(f"[SUCCESS] EDA PDF downloaded: {pdf_file}")
