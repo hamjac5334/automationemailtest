@@ -53,67 +53,24 @@ if len(storecount_files) == 3:
 else:
     print("Warning: Missing one or more storecounts files; skipping merge.")
 
+# Configure EDA settings
+dashboard_url = "https://automatedanalytics.onrender.com/"
+set_eda_config(storecounts.DOWNLOAD_DIR, dashboard_url)
+
 storecounts_30_csv = next((f for f in downloaded_files if f and f.endswith('_5.csv')), None)
 storecounts_60_csv = next((f for f in downloaded_files if f and f.endswith('_6.csv')), None)
 storecounts_90_csv = next((f for f in downloaded_files if f and f.endswith('_7.csv')), None)
 
-# ============================================================================
-# RUN EDA ON THE FIRST REPORT (Sales Summary) - AFTER merge but BEFORE PDF conversion
-# ============================================================================
-
-dashboard_url = "https://automatedanalytics.onrender.com/"
-eda_pdf_path = None
-
-# Use the first report (Sales Summary) for EDA
-target_csv_for_eda = None
-if len(downloaded_files) > 0 and downloaded_files[0] and os.path.isfile(downloaded_files[0]):
-    target_csv_for_eda = downloaded_files[0]
-
-if target_csv_for_eda:
-    print(f"\nPreparing EDA analysis for {target_csv_for_eda}")
-    
-    # Debug: Print all column names before running EDA
-    try:
-        import pandas as pd
-        debug_df = pd.read_csv(target_csv_for_eda)
-        print("\n=== DEBUG: Column Names ===")
-        print(f"Total columns: {len(debug_df.columns)}")
-        for i, col in enumerate(debug_df.columns, 1):
-            print(f"  {i}. {col}")
-        print("=== END Column Names ===\n")
-    except Exception as e:
-        print(f"Warning: Could not read columns for debugging: {e}\n")
-    
-    print("Note: Dashboard may take 1-2 minutes to wake up if it's on Render free tier...")
-    try:
-        eda_pdf_path = run_eda_and_download_report(target_csv_for_eda, dashboard_url, storecounts.DOWNLOAD_DIR)
-        print(f"EDA output: {eda_pdf_path} (exists: {os.path.isfile(eda_pdf_path) if eda_pdf_path else 'N/A'})")
-        if eda_pdf_path and os.path.isfile(eda_pdf_path):
-            today = datetime.now().strftime("%Y-%m-%d")
-            target_eda_pdf_name = f"Report_{today}_EDA.pdf"
-            target_eda_pdf_path = os.path.join(storecounts.DOWNLOAD_DIR, target_eda_pdf_name)
-            shutil.move(eda_pdf_path, target_eda_pdf_path)
-            eda_pdf_path = target_eda_pdf_path
-            print(f"✓ Renamed EDA PDF: {target_eda_pdf_path}")
-        else:
-            print("✗ EDA PDF file missing; continuing without it.")
-            eda_pdf_path = None
-    except Exception as e:
-        print(f"✗ Failed to run dashboard analysis: {e}")
-        print("  Continuing with remaining reports...")
-        eda_pdf_path = None
-else:
-    print("\nNo valid target CSV for dashboard EDA; skipping.")
-
-# NOW convert CSVs to PDF (after EDA is complete)
+# Convert CSVs to PDF (EDA will run automatically on the first one)
 print("\nConverting CSVs to PDFs...")
 pdf_files = []
 
-# Convert main reports to PDF
-for csv_path in downloaded_files[:4]:
+# Convert main reports to PDF - EDA runs on the FIRST report
+for idx, csv_path in enumerate(downloaded_files[:4]):
     if csv_path and os.path.isfile(csv_path):
         try:
-            pdf_path = csv_to_pdf(csv_path)
+            # Run EDA only on the first report (idx == 0)
+            pdf_path = csv_to_pdf(csv_path, run_eda_on_first=(idx == 0))
             print(f"Converted {csv_path} -> {pdf_path}, exists: {os.path.isfile(pdf_path) if pdf_path else 'N/A'}")
             if pdf_path and os.path.isfile(pdf_path):
                 pdf_files.append(pdf_path)
@@ -135,8 +92,10 @@ for sc_csv in (storecounts_30_csv, storecounts_60_csv, storecounts_90_csv):
         except Exception as e:
             print(f"Failed to convert storecounts CSV {sc_csv} to PDF: {e}")
 
-# Add EDA PDF to the list if it exists
-if eda_pdf_path and os.path.isfile(eda_pdf_path):
+# Check for EDA PDF and add it to the list
+today = datetime.now().strftime("%Y-%m-%d")
+eda_pdf_path = os.path.join(storecounts.DOWNLOAD_DIR, f"Report_{today}_EDA.pdf")
+if os.path.isfile(eda_pdf_path):
     pdf_files.append(eda_pdf_path)
     print(f"✓ Appended EDA PDF: {eda_pdf_path}")
 
