@@ -185,28 +185,41 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         file_input.send_keys(os.path.abspath(input_csv))
         
         print("[STEP] Waiting for upload to process and analysis to complete...")
-        # Wait for the data to actually appear on the page (proof of upload)
-        time.sleep(5)
+        # Wait for the backend upload to complete - look for the iframe to load (proof backend finished)
+        iframe_loaded = False
+        for i in range(60):  # Wait up to 60 seconds
+            try:
+                iframe = driver.find_element(By.ID, "report-frame")
+                iframe_src = iframe.get_attribute("src")
+                if iframe_src and "/reports/" in iframe_src:
+                    print(f"[OK] Backend upload complete! Report URL: {iframe_src}")
+                    iframe_loaded = True
+                    break
+            except:
+                pass
+            time.sleep(1)
         
-        # Check if data preview is visible (means upload succeeded)
-        try:
-            data_preview = driver.find_element(By.ID, "data-preview")
-            if data_preview and data_preview.is_displayed():
-                print("[OK] Data preview visible - upload successful!")
-            else:
-                print("[WARN] Data preview not visible yet, waiting longer...")
-                time.sleep(10)
-        except NoSuchElementException:
-            print("[WARN] Could not find data preview element, waiting extra time...")
-            time.sleep(10)
+        if not iframe_loaded:
+            print("[ERROR] Backend upload did not complete - iframe never loaded")
+            return None
         
-        # Wait for analysis to complete
-        print("[STEP] Waiting for backend analysis to complete (~30-40s)...")
-        time.sleep(35)
+        # Give analysis a bit more time to fully complete
+        print("[STEP] Waiting for backend analysis to complete...")
+        time.sleep(15)
 
         print("[STEP] Directory before download click:", sorted(os.listdir(download_dir)))
         print("[STEP] Attempting to click PDF download button...")
         download_pdf_locator = (By.ID, "download-pdf")
+        
+        # Try to dismiss any alerts first
+        try:
+            alert = driver.switch_to.alert
+            alert_text = alert.text
+            print(f"[WARN] Alert detected before click: '{alert_text}' - dismissing...")
+            alert.dismiss()
+            time.sleep(2)
+        except:
+            pass  # No alert, continue
         
         if not click_button_wait_enabled_with_retry(driver, download_pdf_locator):
             print("[ERROR] Failed to click download button")
@@ -214,7 +227,22 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
                 f.write(driver.page_source[:10000])
             return None
 
-        print("[STEP] Download button clicked, waiting for file...")
+        print("[STEP] Download button clicked, handling any alerts...")
+        
+        # Handle alert if it appears after click
+        time.sleep(2)
+        try:
+            alert = driver.switch_to.alert
+            alert_text = alert.text
+            print(f"[ERROR] Alert after download click: '{alert_text}'")
+            print("[INFO] This means the file upload didn't register. Taking screenshot...")
+            with open("alert_error.html", "w") as f:
+                f.write(driver.page_source)
+            alert.dismiss()
+            return None
+        except:
+            print("[OK] No alert detected - download should be in progress")
+            pass
         
         # Debug: Check browser download status
         print("[DEBUG] Checking for download in progress...")
