@@ -7,8 +7,11 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 
 # Update this path to point to report 5 storecounts CSV
 STORECOUNTS_PATH = None  
+DOWNLOAD_DIR = None  # Will be set by main.py
+DASHBOARD_URL = None  # Will be set by main.py
 
 _storecounts_df = None
+_eda_run_for_first_report = False  # Flag to ensure EDA only runs once
 
 def set_storecounts_path(storecounts_path):
     global STORECOUNTS_PATH, _storecounts_df
@@ -21,8 +24,14 @@ def set_storecounts_path(storecounts_path):
     else:
         _storecounts_df = pd.DataFrame(columns=['Distributor Location', 'Product Name', 'StoreCount'])
 
-def csv_to_pdf(csv_path):
-    global _storecounts_df
+def set_eda_config(download_dir, dashboard_url):
+    """Set configuration for EDA dashboard"""
+    global DOWNLOAD_DIR, DASHBOARD_URL
+    DOWNLOAD_DIR = download_dir
+    DASHBOARD_URL = dashboard_url
+
+def csv_to_pdf(csv_path, run_eda_on_first=False):
+    global _storecounts_df, _eda_run_for_first_report
     df = pd.read_csv(csv_path)
 
     # Only merge if storecounts DataFrame is loaded and not empty
@@ -41,6 +50,52 @@ def csv_to_pdf(csv_path):
         else:
             print(f"Required columns missing in {os.path.basename(csv_path)} or storecounts; skipping storecounts merge")
 
+    # Run EDA on the FIRST report AFTER merge but BEFORE PDF conversion
+    if run_eda_on_first and not _eda_run_for_first_report and DOWNLOAD_DIR and DASHBOARD_URL:
+        _eda_run_for_first_report = True  # Set flag so we only run once
+        
+        print(f"\n{'='*60}")
+        print(f"Running EDA on merged data: {os.path.basename(csv_path)}")
+        print(f"{'='*60}")
+        
+        # Debug: Print column names
+        print("\n=== DEBUG: Column Names (After Merge) ===")
+        print(f"Total columns: {len(df.columns)}")
+        for i, col in enumerate(df.columns, 1):
+            print(f"  {i}. {col}")
+        print("=== END Column Names ===\n")
+        
+        # Save merged dataframe to temporary CSV for EDA
+        temp_csv_path = os.path.join(DOWNLOAD_DIR, "temp_merged_for_eda.csv")
+        df.to_csv(temp_csv_path, index=False)
+        print(f"Saved merged data to: {temp_csv_path}")
+        
+        # Run EDA
+        try:
+            from run_auto_eda import run_eda_and_download_report
+            from datetime import datetime
+            import shutil
+            
+            print("Note: Dashboard may take 1-2 minutes to wake up if it's on Render free tier...")
+            eda_pdf_path = run_eda_and_download_report(temp_csv_path, DASHBOARD_URL, DOWNLOAD_DIR)
+            
+            if eda_pdf_path and os.path.isfile(eda_pdf_path):
+                today = datetime.now().strftime("%Y-%m-%d")
+                target_eda_pdf_name = f"Report_{today}_EDA.pdf"
+                target_eda_pdf_path = os.path.join(DOWNLOAD_DIR, target_eda_pdf_name)
+                shutil.move(eda_pdf_path, target_eda_pdf_path)
+                print(f"✓ EDA PDF created: {target_eda_pdf_path}")
+            else:
+                print("✗ EDA PDF file missing; continuing without it.")
+        except Exception as e:
+            print(f"✗ Failed to run EDA: {e}")
+            print("  Continuing with PDF conversion...")
+        finally:
+            # Clean up temp CSV
+            if os.path.exists(temp_csv_path):
+                os.remove(temp_csv_path)
+        
+        print(f"{'='*60}\n")
 
     if df.empty:
         raise ValueError(f"CSV file '{csv_path}' is empty after processing.")
@@ -101,6 +156,11 @@ def csv_to_pdf(csv_path):
         ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
     ])
     table.setStyle(style)
+
+    pdf.build([table])
+
+    print(f"Converted {os.path.basename(csv_path)} → {os.path.basename(pdf_path)}")
+    return pdf_path
 
     pdf.build([table])
 
