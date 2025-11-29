@@ -56,6 +56,11 @@ def csv_to_pdf(csv_path, run_eda_on_first=False):
         print(f"Running EDA on merged data: {os.path.basename(csv_path)}")
         print(f"{'='*60}")
         
+        # Save merged dataframe to temporary CSV for EDA
+        temp_csv_path = os.path.join(DOWNLOAD_DIR, "temp_merged_for_eda.csv")
+        df.to_csv(temp_csv_path, index=False)
+        print(f"Saved merged data to: {temp_csv_path}")
+
         # Debug: Print column names
         print("\n=== DEBUG: Column Names (After Merge) ===")
         print(f"Total columns: {len(df.columns)}")
@@ -63,10 +68,6 @@ def csv_to_pdf(csv_path, run_eda_on_first=False):
             print(f"  {i}. {col}")
         print("=== END Column Names ===\n")
         
-        # Save merged dataframe to temporary CSV for EDA
-        temp_csv_path = os.path.join(DOWNLOAD_DIR, "temp_merged_for_eda.csv")
-        df.to_csv(temp_csv_path, index=False)
-        print(f"Saved merged data to: {temp_csv_path}")
         
         # Run EDA
         try:
