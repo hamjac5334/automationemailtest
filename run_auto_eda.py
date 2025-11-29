@@ -185,27 +185,44 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         file_input.send_keys(os.path.abspath(input_csv))
         
         print("[STEP] Waiting for upload to process and analysis to complete...")
+        print("[INFO] This may take 2-3 minutes for ydata-profiling to generate the report...")
+        
         # Wait for the backend upload to complete - look for the iframe to load (proof backend finished)
         iframe_loaded = False
-        for i in range(60):  # Wait up to 60 seconds
+        for i in range(180):  # Wait up to 3 minutes
             try:
                 iframe = driver.find_element(By.ID, "report-frame")
                 iframe_src = iframe.get_attribute("src")
                 if iframe_src and "/reports/" in iframe_src:
-                    print(f"[OK] Backend upload complete! Report URL: {iframe_src}")
+                    print(f"[OK] Backend upload complete at {i}s! Report URL: {iframe_src}")
                     iframe_loaded = True
                     break
+                elif i % 10 == 0 and i > 0:
+                    print(f"[DEBUG] Still waiting for iframe... {i}s elapsed")
             except:
-                pass
+                if i % 10 == 0 and i > 0:
+                    print(f"[DEBUG] iframe element not found yet... {i}s elapsed")
             time.sleep(1)
         
         if not iframe_loaded:
-            print("[ERROR] Backend upload did not complete - iframe never loaded")
+            print("[ERROR] Backend upload did not complete - iframe never loaded after 180s")
+            print("[DEBUG] Checking page for errors...")
+            try:
+                page_text = driver.find_element(By.TAG_NAME, "body").text
+                if "error" in page_text.lower() or "failed" in page_text.lower():
+                    print(f"[DEBUG] Page contains error text: {page_text[:500]}")
+            except:
+                pass
+            
+            # Save page source for debugging
+            with open("upload_timeout_debug.html", "w") as f:
+                f.write(driver.page_source)
+            print("[DEBUG] Saved page source to upload_timeout_debug.html")
             return None
         
         # Give analysis a bit more time to fully complete
-        print("[STEP] Waiting for backend analysis to complete...")
-        time.sleep(15)
+        print("[STEP] Waiting additional time for analysis to stabilize...")
+        time.sleep(10)
 
         print("[STEP] Directory before download click:", sorted(os.listdir(download_dir)))
         print("[STEP] Attempting to click PDF download button...")
