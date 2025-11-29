@@ -14,16 +14,6 @@ from selenium.common.exceptions import (
 )
 from webdriver_manager.chrome import ChromeDriverManager
 
-def clean_download_dir(download_dir):
-    """Remove old PDFs to avoid confusion"""
-    for f in os.listdir(download_dir):
-        if f.endswith('.pdf'):
-            try:
-                os.remove(os.path.join(download_dir, f))
-                print(f"[CLEANUP] Removed old PDF: {f}")
-            except Exception as e:
-                print(f"[WARN] Could not remove {f}: {e}")
-
 def enable_chrome_headless_download(driver, download_dir):
     """Enable downloads in headless Chrome"""
     driver.execute_cdp_cmd(
@@ -86,16 +76,19 @@ def wait_for_pdf_file(download_dir, timeout=180):
     print(f"[STEP] Waiting for new PDF in {download_dir} (timeout={timeout}s)...")
     start_time = time.time()
     
-    # Get initial PDFs to exclude
-    initial_pdfs = set(f for f in os.listdir(download_dir) if f.endswith('.pdf'))
-    print(f"[DEBUG] Initial PDFs in directory: {initial_pdfs}")
+    # Get initial PDFs to exclude (only exclude temp files, keep dated reports)
+    initial_files = set(os.listdir(download_dir))
+    print(f"[DEBUG] Initial files in directory: {len(initial_files)} files")
     
     last_size = {}
     stable_threshold = 3  # seconds
     
     while time.time() - start_time < timeout:
-        current_pdfs = set(f for f in os.listdir(download_dir) if f.endswith('.pdf'))
-        new_pdfs = current_pdfs - initial_pdfs
+        current_files = set(os.listdir(download_dir))
+        new_files = current_files - initial_files
+        
+        # Look for new PDF files
+        new_pdfs = [f for f in new_files if f.endswith('.pdf')]
         
         if new_pdfs:
             for pdf_name in new_pdfs:
@@ -145,8 +138,7 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
     }
     options.add_experimental_option("prefs", prefs)
 
-    # Clean old PDFs before starting
-    clean_download_dir(download_dir)
+    # NOTE: Removed clean_download_dir() to preserve existing PDFs
     
     driver = None
     try:
