@@ -263,7 +263,7 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         
         # Debug: Check browser download status
         print("[DEBUG] Checking for download in progress...")
-        time.sleep(5)
+        time.sleep(3)  # Give download a moment to start
         
         try:
             user_agent = driver.execute_script("return window.navigator.userAgent")
@@ -273,21 +273,37 @@ def run_eda_and_download_report(input_csv, dashboard_url, download_dir):
         
         print("[STEP] Directory after download click:", sorted(os.listdir(download_dir)))
         
-        # Wait for PDF with increased timeout (300 seconds = 5 minutes)
-        pdf_file = wait_for_pdf_file(download_dir, timeout=300)
+        # Look for PDFs that start with "full_report_" - these are EDA PDFs
+        eda_pdf = None
+        for filename in os.listdir(download_dir):
+            if filename.startswith("full_report_") and filename.endswith(".pdf"):
+                eda_pdf_path = os.path.join(download_dir, filename)
+                # Check if it's a new file (created in last 30 seconds)
+                if os.path.getmtime(eda_pdf_path) > time.time() - 30:
+                    print(f"[SUCCESS] Found EDA PDF: {eda_pdf_path}")
+                    return eda_pdf_path
         
-        if pdf_file:
-            print(f"[SUCCESS] EDA PDF downloaded: {pdf_file}")
-            return pdf_file
-        else:
-            print("[ERROR] PDF download failed or timed out.")
-            # Try to get any error messages from the page
-            try:
-                body_text = driver.find_element(By.TAG_NAME, "body").text
-                print(f"[DEBUG] Page content snippet: {body_text[:500]}")
-            except:
-                pass
-            return None
+        # If not found immediately, wait for it
+        print("[STEP] Waiting for EDA PDF to appear...")
+        start_time = time.time()
+        while time.time() - start_time < 60:  # Wait up to 60 seconds
+            for filename in os.listdir(download_dir):
+                if filename.startswith("full_report_") and filename.endswith(".pdf"):
+                    eda_pdf_path = os.path.join(download_dir, filename)
+                    file_size = os.path.getsize(eda_pdf_path)
+                    if file_size > 1000:  # Make sure it's not empty
+                        print(f"[SUCCESS] EDA PDF downloaded: {eda_pdf_path} ({file_size} bytes)")
+                        return eda_pdf_path
+            time.sleep(1)
+        
+        print("[ERROR] PDF download failed or timed out.")
+        # Try to get any error messages from the page
+        try:
+            body_text = driver.find_element(By.TAG_NAME, "body").text
+            print(f"[DEBUG] Page content snippet: {body_text[:500]}")
+        except:
+            pass
+        return None
 
     except Exception as e:
         print(f"[FATAL ERROR] Automation error: {repr(e)}")
