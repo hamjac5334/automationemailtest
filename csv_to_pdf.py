@@ -19,8 +19,6 @@ def set_storecounts_path(storecounts_path):
     if os.path.exists(storecounts_path):
         df = pd.read_csv(storecounts_path)
         _storecounts_df = df
-        # If the storecounts file uses 'Distributor Location', keep that column
-        # Don't rename here, merge uses right_on explicitly
     else:
         _storecounts_df = pd.DataFrame(columns=['Distributor Location', 'Product Name', 'StoreCount'])
 
@@ -156,11 +154,6 @@ def csv_to_pdf(csv_path, run_eda_on_first=False):
         ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
     ])
     table.setStyle(style)
-
-    pdf.build([table])
-
-    print(f"Converted {os.path.basename(csv_path)} → {os.path.basename(pdf_path)}")
-    return pdf_path
 
     pdf.build([table])
 
