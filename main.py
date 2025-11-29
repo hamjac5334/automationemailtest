@@ -5,7 +5,7 @@ from run_auto_eda import run_eda_and_download_report
 from datetime import datetime
 import shutil
 import storecounts
-from csv_to_pdf import csv_to_pdf, set_storecounts_path
+from csv_to_pdf import csv_to_pdf, set_storecounts_path, set_eda_config
 
 USERNAME = os.environ.get("DSD_USERNAME")
 PASSWORD = os.environ.get("DSD_PASSWORD")
