@@ -11,7 +11,7 @@ USERNAME = os.environ.get("DSD_USERNAME")
 PASSWORD = os.environ.get("DSD_PASSWORD")
 GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
 #, "mason.holland@hollandplace.net", "chad.elkins@tapsandtables.net", "michael.gallo@islandbrandsusa.com", "jared@bogmayer.com"
-GMAIL_RECIPIENTS = ["jackson@bogmayer.com", "mason.holland@hollandplace.net", "chad.elkins@tapsandtables.net", "michael.gallo@islandbrandsusa.com", "jared@bogmayer.com"]
+GMAIL_RECIPIENTS = ["jackson@bogmayer.com"]
 
 REPORTS = [
     ("Sales Summary", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972383"),
