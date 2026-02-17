@@ -88,13 +88,6 @@ for sc_csv in (storecounts_30_csv, storecounts_60_csv, storecounts_90_csv):
         except Exception as e:
             print(f"Failed to convert storecounts CSV {sc_csv} to PDF: {e}")
 
-# Check for EDA PDF and add it to the list
-today = datetime.now().strftime("%Y-%m-%d")
-eda_pdf_path = os.path.join(storecounts.DOWNLOAD_DIR, f"Report_{today}_EDA.pdf")
-if os.path.isfile(eda_pdf_path):
-    pdf_files.append(eda_pdf_path)
-    print(f"✓ Appended EDA PDF: {eda_pdf_path}")
-
 # Debug output
 print("\n=== DEBUGGING PDF FILES ===")
 print(f"Download directory: {storecounts.DOWNLOAD_DIR}")
