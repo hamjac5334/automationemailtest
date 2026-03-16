@@ -1,5 +1,5 @@
 import os
-from dsd_downloader import download_report
+from dsd_downloader import start_driver, login, download_report
 from gmail_utils import send_email_with_attachments
 from run_auto_eda import run_eda_and_download_report
 from datetime import datetime
@@ -16,6 +16,7 @@ GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
 GMAIL_RECIPIENTS = ["jackson@bogmayer.com"]
 
 
+
 REPORTS = [
     ("Sales Summary", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972383"),
     ("Brand Performance", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972382"),
@@ -27,14 +28,20 @@ REPORTS = [
 ]
 
 print("Downloading reports...\n")
+
+driver, wait = start_driver()
+login(driver, wait, USERNAME, PASSWORD)
+
 downloaded_files = []
 for i, (report_name, url) in enumerate(REPORTS, start=1):
     try:
         print(f"Downloading {report_name}...")
-        path = download_report(USERNAME, PASSWORD, url, report_name)
+        path = download_report(driver, wait, url, report_name)
         downloaded_files.append(path)
     except Exception as e:
         print(f"Failed to download {report_name}: {e}")
+
+driver.quit()
 
 print("\nAll CSVs after download:")
 for f in downloaded_files:
@@ -43,8 +50,10 @@ for f in downloaded_files:
 if len(downloaded_files) < len(REPORTS):
     print("Warning: Not all reports downloaded successfully.")
 
-expected_storecounts = ['_5.csv', '_6.csv', '_7.csv']
-storecount_files = [f for f in downloaded_files if any(f and f.endswith(s) for s in expected_storecounts)]
+storecount_files = [
+    f for f in downloaded_files
+    if f and "store_counts" in f
+]
 
 # Merge storecounts if all 3 files are present
 combined_storecounts_path = None
@@ -61,9 +70,9 @@ else:
 dashboard_url = "https://automatedanalytics.onrender.com/"
 set_eda_config(storecounts.DOWNLOAD_DIR, dashboard_url)
 
-storecounts_30_csv = next((f for f in downloaded_files if f and f.endswith('_5.csv')), None)
-storecounts_60_csv = next((f for f in downloaded_files if f and f.endswith('_6.csv')), None)
-storecounts_90_csv = next((f for f in downloaded_files if f and f.endswith('_7.csv')), None)
+storecounts_30_csv = next((f for f in downloaded_files if "30_days" in f), None)
+storecounts_60_csv = next((f for f in downloaded_files if "60_days" in f), None)
+storecounts_90_csv = next((f for f in downloaded_files if "90_days" in f), None)
 
 # Convert CSVs to PDF (EDA will run automatically on the first one)
 print("\nConverting CSVs to PDFs...")
