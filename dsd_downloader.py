@@ -118,7 +118,11 @@ def download_report(driver, wait, url, report_name):
         print("Export clicked, waiting for download...")
         time.sleep(15)  # adjust if large reports
         
-
+    #need an except right here
+    except Exception as e:
+        print(f"Error downloading report: {e}")
+        return None
+    
     # Detect newest file in DOWNLOAD_DIR
     files = [os.path.join(DOWNLOAD_DIR, f) for f in os.listdir(DOWNLOAD_DIR)]
     if not files:
