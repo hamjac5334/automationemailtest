@@ -12,7 +12,9 @@ PASSWORD = os.environ.get("DSD_PASSWORD")
 GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
 #, "mason.holland@hollandplace.net", "chad.elkins@tapsandtables.net", "michael.gallo@islandbrandsusa.com", "jared@bogmayer.com"
 #additional members: ,"carter@islandbrandsusa.com", "lauryn@rustybullbrewing.com", "max@southernbarrel.com", "ben@rustybullbrewing.com"
-GMAIL_RECIPIENTS = ["jackson@bogmayer.com" , "mason.holland@hollandplace.net", "chad.elkins@tapsandtables.net", "michael.gallo@islandbrandsusa.com", "jared@bogmayer.com", "ben@rustybullbrewing.com"]
+#GMAIL_RECIPIENTS = ["jackson@bogmayer.com" , "mason.holland@hollandplace.net", "chad.elkins@tapsandtables.net", "michael.gallo@islandbrandsusa.com", "jared@bogmayer.com", "ben@rustybullbrewing.com"]
+GMAIL_RECIPIENTS = ["jackson@bogmayer.com"]
+
 
 REPORTS = [
     ("Sales Summary", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972383"),
@@ -29,7 +31,7 @@ downloaded_files = []
 for i, (report_name, url) in enumerate(REPORTS, start=1):
     try:
         print(f"Downloading {report_name}...")
-        path = download_report(USERNAME, PASSWORD, url, report_number=i)
+        path = download_report(USERNAME, PASSWORD, url, report_name)
         downloaded_files.append(path)
     except Exception as e:
         print(f"Failed to download {report_name}: {e}")
