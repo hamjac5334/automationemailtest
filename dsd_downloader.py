@@ -13,7 +13,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 DOWNLOAD_DIR = os.path.join(os.getcwd(), "AutomatedEmailData")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-def download_report(username, password, url, report_number=1):
+def download_report(username, password, url, report_name):
     """
     Download a DSD report from a given URL and rename it uniquely.
     """
@@ -95,7 +95,9 @@ def download_report(username, password, url, report_number=1):
 
     # Rename file uniquely
     date_str = datetime.now().strftime("%Y-%m-%d")
-    new_filename = f"Report_{date_str}_{report_number}.csv"
+    safe_name = report_name.lower().replace(" ", "_")
+    new_filename = f"{safe_name}_{date_str}.csv"
+    
     new_filepath = os.path.join(DOWNLOAD_DIR, new_filename)
     os.rename(newest_file, new_filepath)
     print(f"Report saved to: {new_filepath}")
