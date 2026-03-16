@@ -12,9 +12,12 @@ def add_store_value_counts(csv_path, distributor_col='Distributor Location', pro
 
 def merge_three_storecounts_reports():
     # Assuming downloaded filenames as ..._5.csv, ..._6.csv, ..._7.csv for the 3 time periods
-    csv_30 = [f for f in os.listdir(DOWNLOAD_DIR) if f.endswith('_5.csv')][0]
-    csv_60 = [f for f in os.listdir(DOWNLOAD_DIR) if f.endswith('_6.csv')][0]
-    csv_90 = [f for f in os.listdir(DOWNLOAD_DIR) if f.endswith('_7.csv')][0]
+    csv_30 = next((f for f in os.listdir(DOWNLOAD_DIR) if "30_days" in f), None)
+    csv_60 = next((f for f in os.listdir(DOWNLOAD_DIR) if "60_days" in f), None)
+    csv_90 = next((f for f in os.listdir(DOWNLOAD_DIR) if "90_days" in f), None)
+
+    if not all([csv_30, csv_60, csv_90]):
+        raise Exception("Missing one or more store count CSV files.")
 
     df_30 = add_store_value_counts(os.path.join(DOWNLOAD_DIR, csv_30))
     df_60 = add_store_value_counts(os.path.join(DOWNLOAD_DIR, csv_60))
