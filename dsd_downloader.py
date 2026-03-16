@@ -13,7 +13,44 @@ from webdriver_manager.chrome import ChromeDriverManager
 DOWNLOAD_DIR = os.path.join(os.getcwd(), "AutomatedEmailData")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-def download_report(username, password, url, report_name):
+def start_driver():
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless=new")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+
+    prefs = {
+        "download.default_directory": DOWNLOAD_DIR,
+        "download.prompt_for_download": False,
+        "download.directory_upgrade": True
+    }
+    options.add_experimental_option("prefs", prefs)
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    wait = WebDriverWait(driver, 30)
+
+    return driver, wait
+
+def login(driver, wait, username, password):
+    print("Opening login page...")
+    driver.get("https://dsdlink.com/Home?DashboardID=185125")
+    time.sleep(3)
+
+    try:
+        username_elem = wait.until(EC.presence_of_element_located((By.ID, "ews-login-username")))
+        password_elem = wait.until(EC.presence_of_element_located((By.ID, "ews-login-password")))
+
+        username_elem.send_keys(username)
+        password_elem.send_keys(password, Keys.RETURN)
+
+        print("Logged in successfully.")
+        time.sleep(5)
+
+    except:
+        print("Already logged in or login not required.")
+
+
+def download_report(driver, wait, url, report_name):
     """
     Download a DSD report from a given URL and rename it uniquely.
     """
@@ -30,9 +67,6 @@ def download_report(username, password, url, report_name):
         "download.directory_upgrade": True
     }
     options.add_experimental_option("prefs", prefs)
-
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    wait = WebDriverWait(driver, 30)
 
     try:
         # Login page
@@ -83,9 +117,7 @@ def download_report(username, password, url, report_name):
         csv_option.click()
         print("Export clicked, waiting for download...")
         time.sleep(15)  # adjust if large reports
-
-    finally:
-        driver.quit()
+        
 
     # Detect newest file in DOWNLOAD_DIR
     files = [os.path.join(DOWNLOAD_DIR, f) for f in os.listdir(DOWNLOAD_DIR)]
