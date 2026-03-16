@@ -18,10 +18,10 @@ GMAIL_RECIPIENTS = ["jackson@bogmayer.com"]
 
 
 REPORTS = [
-    ("Sales Summary", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972383"),
-    ("Brand Performance", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972382"),
-    ("Weekly Volume", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972378"),
-    ("Retail Sales", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972365"),
+    ("SCP_SC", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972383"),
+    ("SCP_GA", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972382"),
+    ("Tryon", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972378"),
+    ("Cavalier", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972365"),
     ("Store Counts 30 Days", "https://dsdlink.com/Home?DashboardID=100120&ReportID=23124246"),
     ("Store Counts 60 Days", "https://dsdlink.com/Home?DashboardID=100120&ReportID=23153930"),  
     ("Store Counts 90 Days", "https://dsdlink.com/Home?DashboardID=100120&ReportID=23157734")
