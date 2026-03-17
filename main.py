@@ -167,18 +167,18 @@ all_pdfs = [f for f in pdf_files if os.path.isfile(f)]
 # Main gets everything
 main_pdfs = all_pdfs.copy()
 
-# Charleston group
-charleston_keywords = ["rusty_bull", "southern_barrel", "island"]
+#Indexing for bottom groups
+CHARLESTON_INDEXES = [0,7, 8] 
+GEORGIA_INDEXES = [2,7,8] 
+
 charleston_pdfs = [
-    f for f in all_pdfs
-    if any(keyword in os.path.basename(f).lower() for keyword in charleston_keywords)
+    all_pdfs[i] for i in CHARLESTON_INDEXES
+    if i < len(all_pdfs)
 ]
 
-# Georgia group
-georgia_keywords = ["georgia"]
 georgia_pdfs = [
-    f for f in all_pdfs
-    if any(keyword in os.path.basename(f).lower() for keyword in georgia_keywords)
+    all_pdfs[i] for i in GEORGIA_INDEXES
+    if i < len(all_pdfs)
 ]
 
 print(f"Main PDFs: {len(main_pdfs)}")
