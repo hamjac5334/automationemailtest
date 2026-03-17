@@ -22,7 +22,7 @@ CHARLESTON_RECIPIENTS = [
 ]
 
 GEORGIA_RECIPIENTS = [
-    "jackson@bogmayer.com
+    "jackson@bogmayer.com"
 ]
 
 
