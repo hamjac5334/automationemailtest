@@ -34,16 +34,16 @@ REPORTS = [
     ("Cavalier", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972365"),
     ("Store Counts 30 Days", "https://dsdlink.com/Home?DashboardID=100120&ReportID=23124246"),
     ("Store Counts 60 Days", "https://dsdlink.com/Home?DashboardID=100120&ReportID=23153930"),  
-    ("Store Counts 90 Days", "https://dsdlink.com/Home?DashboardID=100120&ReportID=23157734")
+    ("Store Counts 90 Days", "https://dsdlink.com/Home?DashboardID=100120&ReportID=23157734"),
 
     #second report group
     ("Rusty Bull", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153712"), 
-    ("Southern Barrel", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153732")
+    ("Southern Barrel", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153732"),
 
     #Third report group:
     ("Rusty Bull", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153712"), 
-    ("Southern Barrel", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153732")
-    ("Georgia_SCP", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972382"),
+    ("Southern Barrel", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153732"),
+    ("Georgia_SCP", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972382")
     
 ]
 
@@ -186,14 +186,14 @@ print(f"Main PDFs: {len(main_pdfs)}")
 print(f"Charleston PDFs: {len(charleston_pdfs)}")
 print(f"Georgia PDFs: {len(georgia_pdfs)}")
     
-    send_email_with_attachments(
-        sender=GMAIL_ADDRESS,
-        to=", ".join(MAIN_RECIPIENTS),
-        subject="Automated DSD Reports - Full",
-        body="Full report set attached.",
-        attachments=main_pdfs
-    )
-    print("Sent MAIN email")
+send_email_with_attachments(
+    sender=GMAIL_ADDRESS,
+    to=", ".join(MAIN_RECIPIENTS),
+    subject="Automated DSD Reports - Full",
+    body="Full report set attached.",
+    attachments=main_pdfs
+)
+print("Sent MAIN email")
 if charleston_pdfs:
     send_email_with_attachments(
         sender=GMAIL_ADDRESS,
