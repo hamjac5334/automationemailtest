@@ -218,16 +218,3 @@ if georgia_pdfs:
 else:
     print("No Georgia PDFs found")
 
-Attached are the latest DSD reports as PDFs:
-1. SCP/KW in SC
-2. SCP in GA
-3. Tryon
-4. Cavalier
-5-7. List of Retail Stores
-8. Auto EDA
-""",
-        attachments=valid_attachments
-    )
-    print("\n Email sent successfully.")
-except Exception as e:
-    print(f"\n✗ Failed to send email: {e}")
