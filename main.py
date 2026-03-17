@@ -43,7 +43,7 @@ REPORTS = [
     #Third report group:
     ("Rusty Bull", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153712"), 
     ("Southern Barrel", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153732"),
-    ("Georgia_SCP", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972382")
+    ("Georgia_All_SCP", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24478351")
     
 ]
 
@@ -169,7 +169,7 @@ main_pdfs = all_pdfs.copy()
 
 #Indexing for bottom groups
 CHARLESTON_INDEXES = [0,7, 8] 
-GEORGIA_INDEXES = [2,7,8] 
+GEORGIA_INDEXES = [7,8,9] 
 
 charleston_pdfs = [
     all_pdfs[i] for i in CHARLESTON_INDEXES
@@ -198,8 +198,8 @@ if charleston_pdfs:
     send_email_with_attachments(
         sender=GMAIL_ADDRESS,
         to=", ".join(CHARLESTON_RECIPIENTS),
-        subject="Charleston Reports",
-        body="Charleston-specific reports attached.",
+        subject="Charleston Island Reports",
+        body="South Carolina SCP reports attached.",
         attachments=charleston_pdfs
     )
     print("Sent Charleston email")
