@@ -37,8 +37,8 @@ REPORTS = [
     ("Store Counts 90 Days", "https://dsdlink.com/Home?DashboardID=100120&ReportID=23157734"),
 
     #second report group
-    ("Rusty Bull", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153712"), 
-    ("Southern Barrel", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153732"),
+    #("Rusty Bull", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153712"), 
+    #("Southern Barrel", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153732"),
 
     #Third report group:
     ("Rusty Bull", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153712"), 
