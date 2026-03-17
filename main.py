@@ -150,18 +150,17 @@ print("\nFinal list of PDFs to attach:")
 for f in pdf_files:
     print(f"  {f} (exists: {os.path.isfile(f)})")
 
-try:
-    valid_attachments = [f for f in pdf_files if os.path.isfile(f)]
-    print(f"\n Found {len(valid_attachments)} valid PDF attachments")
-    
-    if not valid_attachments:
-        print("\n[ERROR] No valid PDF attachments found! Email will be sent without attachments.")
-    else:
-        print("\nSending email with these attachments:")
-        for f in valid_attachments:
-            print(f"  {f}")
+valid_attachments = [f for f in pdf_files if os.path.isfile(f)]
+print(f"\n Found {len(valid_attachments)} valid PDF attachments")
 
-    print("\nGrouping PDFs for email distribution...")
+if not valid_attachments:
+    print("\n[ERROR] No valid PDF attachments found! Email will be sent without attachments.")
+else:
+    print("\nSending email with these attachments:")
+    for f in valid_attachments:
+        print(f"  {f}")
+
+print("\nGrouping PDFs for email distribution...")
 
 all_pdfs = [f for f in pdf_files if os.path.isfile(f)]
 
@@ -185,7 +184,7 @@ georgia_pdfs = [
 print(f"Main PDFs: {len(main_pdfs)}")
 print(f"Charleston PDFs: {len(charleston_pdfs)}")
 print(f"Georgia PDFs: {len(georgia_pdfs)}")
-    
+
 send_email_with_attachments(
     sender=GMAIL_ADDRESS,
     to=", ".join(MAIN_RECIPIENTS),
@@ -194,6 +193,7 @@ send_email_with_attachments(
     attachments=main_pdfs
 )
 print("Sent MAIN email")
+
 if charleston_pdfs:
     send_email_with_attachments(
         sender=GMAIL_ADDRESS,
@@ -217,4 +217,3 @@ if georgia_pdfs:
     print("Sent Georgia email")
 else:
     print("No Georgia PDFs found")
-
