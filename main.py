@@ -15,16 +15,36 @@ GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
 #GMAIL_RECIPIENTS = ["jackson@bogmayer.com" , "mason.holland@hollandplace.net", "chad.elkins@tapsandtables.net", "michael.gallo@islandbrandsusa.com", "jared@bogmayer.com", "ben@rustybullbrewing.com"]
 GMAIL_RECIPIENTS = ["jackson@bogmayer.com"]
 
+MAIN_RECIPIENTS = ["jackson@bogmayer.com"]
+
+CHARLESTON_RECIPIENTS = [
+    "jackson@bogmayer.com"
+]
+
+GEORGIA_RECIPIENTS = [
+    "jackson@bogmayer.com
+]
 
 
 REPORTS = [
-    ("SCP_SC", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972383"),
-    ("SCP_GA", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972382"),
+    #First report group
+    ("SC_SCP", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972383"),
+    ("Georgia_SCP", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972382"),
     ("Tryon", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972378"),
     ("Cavalier", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972365"),
     ("Store Counts 30 Days", "https://dsdlink.com/Home?DashboardID=100120&ReportID=23124246"),
     ("Store Counts 60 Days", "https://dsdlink.com/Home?DashboardID=100120&ReportID=23153930"),  
     ("Store Counts 90 Days", "https://dsdlink.com/Home?DashboardID=100120&ReportID=23157734")
+
+    #second report group
+    ("Rusty Bull", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153712"), 
+    ("Southern Barrel", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153732")
+
+    #Third report group:
+    ("Rusty Bull", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153712"), 
+    ("Southern Barrel", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153732")
+    ("Georgia_SCP", "https://dsdlink.com/Home?DashboardID=100120&ReportID=22972382"),
+    
 ]
 
 print("Downloading reports...\n")
@@ -79,7 +99,7 @@ print("\nConverting CSVs to PDFs...")
 pdf_files = []
 
 # Convert main reports to PDF - EDA runs on the FIRST report
-for idx, csv_path in enumerate(downloaded_files[:4]):
+for idx, csv_path in enumerate(downloaded_files): 
     if csv_path and os.path.isfile(csv_path):
         try:
             # Run EDA only on the first report (idx == 0)
@@ -140,19 +160,71 @@ try:
         print("\nSending email with these attachments:")
         for f in valid_attachments:
             print(f"  {f}")
+
+    print("\nGrouping PDFs for email distribution...")
+
+all_pdfs = [f for f in pdf_files if os.path.isfile(f)]
+
+# Main gets everything
+main_pdfs = all_pdfs.copy()
+
+# Charleston group
+charleston_keywords = ["rusty_bull", "southern_barrel", "island"]
+charleston_pdfs = [
+    f for f in all_pdfs
+    if any(keyword in os.path.basename(f).lower() for keyword in charleston_keywords)
+]
+
+# Georgia group
+georgia_keywords = ["georgia"]
+georgia_pdfs = [
+    f for f in all_pdfs
+    if any(keyword in os.path.basename(f).lower() for keyword in georgia_keywords)
+]
+
+print(f"Main PDFs: {len(main_pdfs)}")
+print(f"Charleston PDFs: {len(charleston_pdfs)}")
+print(f"Georgia PDFs: {len(georgia_pdfs)}")
     
     send_email_with_attachments(
         sender=GMAIL_ADDRESS,
-        to=", ".join(GMAIL_RECIPIENTS),
-        subject="Automated DSD Reports",
-        body="""This is an automated email.
+        to=", ".join(MAIN_RECIPIENTS),
+        subject="Automated DSD Reports - Full",
+        body="Full report set attached.",
+        attachments=main_pdfs
+    )
+    print("Sent MAIN email")
+if charleston_pdfs:
+    send_email_with_attachments(
+        sender=GMAIL_ADDRESS,
+        to=", ".join(CHARLESTON_RECIPIENTS),
+        subject="Charleston Reports",
+        body="Charleston-specific reports attached.",
+        attachments=charleston_pdfs
+    )
+    print("Sent Charleston email")
+else:
+    print("No Charleston PDFs found")
+
+if georgia_pdfs:
+    send_email_with_attachments(
+        sender=GMAIL_ADDRESS,
+        to=", ".join(GEORGIA_RECIPIENTS),
+        subject="Georgia Reports",
+        body="Georgia-specific reports attached.",
+        attachments=georgia_pdfs
+    )
+    print("Sent Georgia email")
+else:
+    print("No Georgia PDFs found")
 
 Attached are the latest DSD reports as PDFs:
 1. SCP/KW in SC
 2. SCP in GA
 3. Tryon
 4. Cavalier
-5. List of Retail Stores
+5-7. List of Retail Stores
+8. Auto EDA
 """,
         attachments=valid_attachments
     )
