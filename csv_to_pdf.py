@@ -107,6 +107,17 @@ def csv_to_pdf(csv_path, run_eda_on_first=False):
 
     df = df.drop_duplicates()
 
+    #NEWLY added
+    df["On Floor Inventory (Cases)"] = pd.to_numeric(df["On Floor Inventory (Cases)"], errors="coerce")
+
+    if "Product Name" in df.columns and "On Floor Inventory (Cases)" in df.columns and "Location" in df.columns:
+        bad_locations = df[
+            (df["Product Name"] == "Total") &
+            (df["On Floor Inventory (Cases)"] == 0.0)
+        ]["Location"].unique()
+    
+        df = df[~df["Location"].isin(bad_locations)]
+
     pdf_path = csv_path.replace(".csv", ".pdf")
     page_width, page_height = landscape(letter)
     pdf = SimpleDocTemplate(pdf_path, pagesize=landscape(letter))
