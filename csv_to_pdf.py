@@ -110,13 +110,19 @@ def csv_to_pdf(csv_path, run_eda_on_first=False):
     #NEWLY added
     df["On Floor Inventory (Cases)"] = pd.to_numeric(df["On Floor Inventory (Cases)"], errors="coerce")
 
-    if "Product Name" in df.columns and "On Floor Inventory (Cases)" in df.columns and "Location" in df.columns:
-        bad_locations = df[
+    required_cols = {"Product Name", "On Floor Inventory (Cases)", "Location"}
+
+    if required_cols.issubset(df.columns):
+        
+        zero_total_locations = df[
             (df["Product Name"] == "Total") &
             (df["On Floor Inventory (Cases)"] == 0.0)
         ]["Location"].unique()
     
-        df = df[~df["Location"].isin(bad_locations)]
+        df = df[~df["Location"].isin(zero_total_locations)]
+    
+    else:
+        print(f"Skipping zero-total filter for {os.path.basename(csv_path)} (missing required columns)")
 
     pdf_path = csv_path.replace(".csv", ".pdf")
     page_width, page_height = landscape(letter)
