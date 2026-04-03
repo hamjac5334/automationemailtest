@@ -108,11 +108,14 @@ def csv_to_pdf(csv_path, run_eda_on_first=False):
     df = df.drop_duplicates()
 
     #NEWLY added
-    df["On Floor Inventory (Cases)"] = pd.to_numeric(df["On Floor Inventory (Cases)"], errors="coerce")
-
     required_cols = {"Product Name", "On Floor Inventory (Cases)", "Location"}
 
     if required_cols.issubset(df.columns):
+        
+        # Only convert if column exists
+        df["On Floor Inventory (Cases)"] = pd.to_numeric(
+            df["On Floor Inventory (Cases)"], errors="coerce"
+        )
         
         zero_total_locations = df[
             (df["Product Name"] == "Total") &
