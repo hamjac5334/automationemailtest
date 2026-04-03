@@ -16,8 +16,8 @@ GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
 #GMAIL_RECIPIENTS = ["jackson@bogmayer.com"]
 
 MAIN_RECIPIENTS = [
-    "jackson@bogmayer.com" 
-    "michael.gallo@islandbrandsusa.com",
+    "jackson@bogmayer.com",
+    "michael.gallo@islandbrandsusa.com"
     #"mason.holland@hollandplace.net",
     #"chad.elkins@tapsandtables.net",
     #"jared@bogmayer.com",
@@ -25,8 +25,8 @@ MAIN_RECIPIENTS = [
 ]
 
 CHARLESTON_RECIPIENTS = [
-    "jackson@bogmayer.com"
-    "michael.gallo@islandbrandsusa.com",
+    "jackson@bogmayer.com",
+    "michael.gallo@islandbrandsusa.com"
     #"carter@islandbrandsusa.com",
     #"lauryn@rustybullbrewing.com", 
     #"max@southernbarrel.com", 
@@ -35,8 +35,8 @@ CHARLESTON_RECIPIENTS = [
 ]
 
 GEORGIA_RECIPIENTS = [
-    "jackson@bogmayer.com"
-    "michael.gallo@islandbrandsusa.com",
+    "jackson@bogmayer.com",
+    "michael.gallo@islandbrandsusa.com"
     #"max@southernbarrel.com", 
     #"ben@rustybullbrewing.com"
 ]
