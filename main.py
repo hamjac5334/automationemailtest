@@ -5,7 +5,7 @@ from run_auto_eda import run_eda_and_download_report
 from datetime import datetime
 import shutil
 import storecounts
-from csv_to_pdf import csv_to_pdf, set_storecounts_path, set_eda_config
+from csv_to_pdf import csv_to_pdf, set_storecounts_path, set_eda_config, split_and_convert_by_location
 
 USERNAME = os.environ.get("DSD_USERNAME")
 PASSWORD = os.environ.get("DSD_PASSWORD")
@@ -38,6 +38,10 @@ GEORGIA_RECIPIENTS = [
     #"michael.gallo@islandbrandsusa.com",
     #"max@southernbarrel.com", 
     #"ben@rustybullbrewing.com"
+]
+
+CONSOLIDATED_RECIPIENTS = [
+    "jackson@bogmayer.com"
 ]
 
 
@@ -190,6 +194,7 @@ main_pdfs = all_pdfs.copy()
 CHARLESTON_INDEXES = [0,7, 8] 
 GEORGIA_INDEXES = [7,8,9] 
 
+
 charleston_pdfs = [
     all_pdfs[i] for i in CHARLESTON_INDEXES
     if i < len(all_pdfs)
@@ -232,6 +237,34 @@ if georgia_pdfs:
         subject="Georgia Reports",
         body="Georgia-specific reports attached.",
         attachments=georgia_pdfs
+
+# --- 4th group: Consolidated report split by Location ---
+consolidated_csv = next(
+    (f for f in downloaded_files if f and "consolidated" in f.lower()),
+    None
+)
+
+if consolidated_csv and os.path.isfile(consolidated_csv):
+    print("\nSplitting Consolidated report by Location...")
+    try:
+        from csv_to_pdf import split_and_convert_by_location
+        consolidated_pdfs = split_and_convert_by_location(consolidated_csv)
+
+        if consolidated_pdfs:
+            send_email_with_attachments(
+                sender=GMAIL_ADDRESS,
+                to=", ".join(CONSOLIDATED_RECIPIENTS),
+                subject="Consolidated Inventory Reports by Location",
+                body="Consolidated inventory split by location — one PDF per location attached.",
+                attachments=consolidated_pdfs
+            )
+            print(f"Sent Consolidated email ({len(consolidated_pdfs)} PDFs)")
+        else:
+            print("No Consolidated PDFs generated; skipping email.")
+    except Exception as e:
+        print(f"Failed to process Consolidated report: {e}")
+else:
+    print("Consolidated CSV not found; skipping 4th group email.")
     )
     print("Sent Georgia email")
 else:
