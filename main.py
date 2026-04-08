@@ -58,7 +58,7 @@ REPORTS = [
     #Third report group:
     ("Rusty Bull", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153712"), 
     ("Southern Barrel", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153732"),
-    ("Georgia_All_SCP", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24478351")
+    ("Georgia_All_SCP", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24478351"),
 
     #fourth report group
     #South Carolina Consolidated Inventory
