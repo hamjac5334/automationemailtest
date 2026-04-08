@@ -27,6 +27,48 @@ def set_eda_config(download_dir, dashboard_url):
     global DOWNLOAD_DIR, DASHBOARD_URL
     DOWNLOAD_DIR = download_dir
     DASHBOARD_URL = dashboard_url
+    
+def split_and_convert_by_location(csv_path):
+    """
+    Reads a CSV, splits it into one DataFrame per unique 'Location' value,
+    writes each slice to a temp CSV, converts it to PDF via csv_to_pdf(),
+    and returns the list of resulting PDF paths.
+    """
+    import tempfile
+
+    df = pd.read_csv(csv_path)
+
+    if "Location" not in df.columns:
+        raise ValueError(f"'Location' column not found in {csv_path}")
+
+    base_dir = os.path.dirname(csv_path)
+    pdf_paths = []
+
+    for location in df["Location"].unique():
+        location_df = df[df["Location"] == location].copy()
+
+        # Sanitise the location name for use in a filename
+        safe_name = "".join(c if c.isalnum() or c in " _-" else "_" for c in str(location)).strip()
+
+        # Write the slice to a temp CSV so csv_to_pdf() can process it normally
+        temp_csv = os.path.join(base_dir, f"_temp_consolidated_{safe_name}.csv")
+        location_df.to_csv(temp_csv, index=False)
+
+        try:
+            pdf_path = csv_to_pdf(temp_csv)
+            if pdf_path and os.path.isfile(pdf_path):
+                # Rename the PDF to something meaningful (drop the _temp_ prefix)
+                final_pdf = os.path.join(base_dir, f"Consolidated_{safe_name}.pdf")
+                os.replace(pdf_path, final_pdf)
+                pdf_paths.append(final_pdf)
+                print(f"Created location PDF: {os.path.basename(final_pdf)}")
+        except Exception as e:
+            print(f"Failed to convert location '{location}': {e}")
+        finally:
+            if os.path.exists(temp_csv):
+                os.remove(temp_csv)
+
+    return pdf_paths
 
 def csv_to_pdf(csv_path, run_eda_on_first=False):
     global _storecounts_df, _eda_run_for_first_report
