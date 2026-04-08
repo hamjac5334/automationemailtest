@@ -224,7 +224,7 @@ if charleston_pdfs:
         to=", ".join(CHARLESTON_RECIPIENTS),
         subject="Charleston Island Reports",
         body="South Carolina SCP reports attached.",
-        attachments=charleston_pdfs
+        attachments= charleston_pdfs
     )
     print("Sent Charleston email")
 else:
@@ -236,7 +236,8 @@ if georgia_pdfs:
         to=", ".join(GEORGIA_RECIPIENTS),
         subject="Georgia Reports",
         body="Georgia-specific reports attached.",
-        attachments=georgia_pdfs
+        attachments= georgia_pdfs
+    )
 
 # --- 4th group: Consolidated report split by Location ---
 consolidated_csv = next(
