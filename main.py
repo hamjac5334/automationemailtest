@@ -236,8 +236,11 @@ if georgia_pdfs:
         to=", ".join(GEORGIA_RECIPIENTS),
         subject="Georgia Reports",
         body="Georgia-specific reports attached.",
-        attachments= georgia_pdfs
+        attachments=georgia_pdfs
     )
+    print("Sent Georgia email")
+else:
+    print("No Georgia PDFs found")
 
 # --- 4th group: Consolidated report split by Location ---
 consolidated_csv = next(
@@ -248,9 +251,7 @@ consolidated_csv = next(
 if consolidated_csv and os.path.isfile(consolidated_csv):
     print("\nSplitting Consolidated report by Location...")
     try:
-        from csv_to_pdf import split_and_convert_by_location
         consolidated_pdfs = split_and_convert_by_location(consolidated_csv)
-
         if consolidated_pdfs:
             send_email_with_attachments(
                 sender=GMAIL_ADDRESS,
@@ -266,7 +267,3 @@ if consolidated_csv and os.path.isfile(consolidated_csv):
         print(f"Failed to process Consolidated report: {e}")
 else:
     print("Consolidated CSV not found; skipping 4th group email.")
-    )
-    print("Sent Georgia email")
-else:
-    print("No Georgia PDFs found")
