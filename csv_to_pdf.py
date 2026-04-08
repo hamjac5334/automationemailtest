@@ -1,4 +1,4 @@
-import os
+splitimport os
 import pandas as pd
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, landscape
@@ -27,6 +27,29 @@ def set_eda_config(download_dir, dashboard_url):
     global DOWNLOAD_DIR, DASHBOARD_URL
     DOWNLOAD_DIR = download_dir
     DASHBOARD_URL = dashboard_url
+
+def sort_by_product_order(df):
+    PREFIX_ORDER = [
+        "Island Coastal Lager",
+        "Island Active",
+        "Island Chill",
+        "Rusty Bull Dance Naked",
+        "Rusty Bull Juice Juice",
+        "Southern Barrel Damn Yankee",
+        "Southern Barrel Helles",
+    ]
+
+    def get_sort_key(product_name):
+        name = str(product_name)
+        for i, prefix in enumerate(PREFIX_ORDER):
+            if name.startswith(prefix):
+                return i
+        return len(PREFIX_ORDER)  # everything else goes to the end
+
+    df = df.copy()
+    df["_sort_key"] = df["Product Name"].apply(get_sort_key)
+    df = df.sort_values("_sort_key").drop(columns=["_sort_key"])
+    return df
     
 def split_and_convert_by_location(csv_path):
     """
@@ -40,6 +63,12 @@ def split_and_convert_by_location(csv_path):
 
     if "Location" not in df.columns:
         raise ValueError(f"'Location' column not found in {csv_path}")
+
+    # Sort by custom product order before splitting
+    if "Product Name" in df.columns:
+        df = sort_by_product_order(df)
+    else:
+        print("Warning: 'Product Name' column not found; skipping custom sort.")
 
     base_dir = os.path.dirname(csv_path)
     pdf_paths = []
