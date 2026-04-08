@@ -75,6 +75,7 @@ def split_and_convert_by_location(csv_path):
 
     for location in df["Location"].unique():
         location_df = df[df["Location"] == location].copy()
+        location_df = location_df.iloc[1:].reset_index(drop=True)
 
         # Sanitise the location name for use in a filename
         safe_name = "".join(c if c.isalnum() or c in " _-" else "_" for c in str(location)).strip()
