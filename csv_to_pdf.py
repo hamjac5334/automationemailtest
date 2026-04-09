@@ -198,11 +198,22 @@ def split_and_convert_by_location(csv_path):
     else:
         print("Warning: 'Product Name' column not found; skipping custom sort.")
 
+    # Drop first 2 rows before split
+    df = df.iloc[2:].reset_index(drop=True)
+
     base_dir = os.path.dirname(csv_path)
     pdf_paths = []
 
     for location in df["Location"].unique():
         location_df = df[df["Location"] == location].copy()
+
+        # Create Total row
+        total_row = {col: "" for col in location_df.columns}
+        total_row["Product Name"] = "Total"
+        total_row["On Floor Inventory (Case Equivs)"] = pd.to_numeric(
+            location_df["On Floor Inventory (Case Equivs)"], errors="coerce"
+        ).sum()
+        location_df = pd.concat([location_df, pd.DataFrame([total_row])]).reset_index(drop=True)
 
         safe_name = "".join(c if c.isalnum() or c in " _-" else "_" for c in str(location)).strip()
 
