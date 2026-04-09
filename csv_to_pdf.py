@@ -37,12 +37,27 @@ def sort_by_product_order(df):
         "Southern Barrel Helles",
     ]
 
-    def get_sort_key(product_name):
+    SUFFIX_ORDER = [
+        "1/6",
+        "1/2",
+        "2/12",
+        "4/6",
+        "6/4",
+    ]
+
+    def get_prefix_key(product_name):
         name = str(product_name)
         for i, prefix in enumerate(PREFIX_ORDER):
             if name.startswith(prefix):
                 return i
         return len(PREFIX_ORDER)
+
+    def get_suffix_key(product_name):
+        name = str(product_name)
+        for i, suffix in enumerate(SUFFIX_ORDER):
+            if suffix in name:
+                return i
+        return len(SUFFIX_ORDER)
 
     df = df.copy()
 
@@ -51,8 +66,9 @@ def sort_by_product_order(df):
     pinned_rows = df[pinned_mask]
     rest = df[~pinned_mask].copy()
 
-    rest["_sort_key"] = rest["Product Name"].apply(get_sort_key)
-    rest = rest.sort_values("_sort_key").drop(columns=["_sort_key"])
+    rest["_prefix_key"] = rest["Product Name"].apply(get_prefix_key)
+    rest["_suffix_key"] = rest["Product Name"].apply(get_suffix_key)
+    rest = rest.sort_values(["_prefix_key", "_suffix_key"]).drop(columns=["_prefix_key", "_suffix_key"])
 
     df = pd.concat([pinned_rows, rest]).reset_index(drop=True)
     return df
@@ -191,19 +207,33 @@ def csv_to_pdf(csv_path, run_eda_on_first=False, skip_location_total=False):
     return pdf_path
 
 def split_and_convert_by_location(csv_path):
+    LOCATION_ORDER = [
+        "Charleston",
+        "Columbia",
+        "Greenville",
+        "Myrtle",
+        "Florence",
+    ]
+
+    def get_location_key(location):
+        name = str(location)
+        for i, keyword in enumerate(LOCATION_ORDER):
+            if keyword in name:
+                return i
+        return len(LOCATION_ORDER)
+
     df = pd.read_csv(csv_path)
 
     if "Location" not in df.columns:
         raise ValueError(f"'Location' column not found in {csv_path}")
 
-    # Rename the first row of each location group (the source system's Total row)
-    # and drop the blank separator row that follows it
+    # Rename the first row of each location group to Total and drop blank separator rows
     cleaned_groups = []
     for location, group in df.groupby("Location", sort=False):
         group = group.copy().reset_index(drop=True)
-        group.at[0, "Product Name"] = "Total"          # rename first row to Total
-        group = group[group["Product Name"] != ""].copy()  # drop blank Product Name rows
-        group = group[group["Product Name"].notna()].copy()  # drop NaN Product Name rows
+        group.at[0, "Product Name"] = "Total"
+        group = group[group["Product Name"] != ""].copy()
+        group = group[group["Product Name"].notna()].copy()
         cleaned_groups.append(group)
 
     df = pd.concat(cleaned_groups).reset_index(drop=True)
@@ -216,7 +246,9 @@ def split_and_convert_by_location(csv_path):
     base_dir = os.path.dirname(csv_path)
     pdf_paths = []
 
-    for location in df["Location"].unique():
+    sorted_locations = sorted(df["Location"].unique(), key=get_location_key)
+
+    for location in sorted_locations:
         location_df = df[df["Location"] == location].copy()
         location_df = location_df.drop_duplicates(subset=["Product Name"])
 
