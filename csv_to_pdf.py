@@ -44,11 +44,17 @@ def sort_by_product_order(df):
         for i, prefix in enumerate(PREFIX_ORDER):
             if name.startswith(prefix):
                 return i
-        return len(PREFIX_ORDER)  # everything else goes to the end
+        return len(PREFIX_ORDER)
 
     df = df.copy()
-    df["_sort_key"] = df["Product Name"].apply(get_sort_key)
-    df = df.sort_values("_sort_key").drop(columns=["_sort_key"])
+    
+    top_rows = df.iloc[:2]          # lock in first two rows
+    rest = df.iloc[2:].copy()       # only sort rows from index 2 onward
+    
+    rest["_sort_key"] = rest["Product Name"].apply(get_sort_key)
+    rest = rest.sort_values("_sort_key").drop(columns=["_sort_key"])
+    
+    df = pd.concat([top_rows, rest]).reset_index(drop=True)
     return df
     
 def split_and_convert_by_location(csv_path):
@@ -75,7 +81,6 @@ def split_and_convert_by_location(csv_path):
 
     for location in df["Location"].unique():
         location_df = df[df["Location"] == location].copy()
-        location_df = location_df.iloc[1:].reset_index(drop=True)
 
         # Sanitise the location name for use in a filename
         safe_name = "".join(c if c.isalnum() or c in " _-" else "_" for c in str(location)).strip()
