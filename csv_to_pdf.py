@@ -16,6 +16,8 @@ def set_storecounts_path(storecounts_path):
     STORECOUNTS_PATH = storecounts_path
     if os.path.exists(storecounts_path):
         df = pd.read_csv(storecounts_path)
+        # Deduplicate before storing so the merge never fans out rows
+        df = df.drop_duplicates(subset=['Distributor Location', 'Product Name'])
         _storecounts_df = df
     else:
         _storecounts_df = pd.DataFrame(columns=['Distributor Location', 'Product Name', 'StoreCount'])
@@ -206,7 +208,8 @@ def split_and_convert_by_location(csv_path):
 
     for location in df["Location"].unique():
         location_df = df[df["Location"] == location].copy()
-
+        location_df = location_df.drop_duplicates(subset=["Product Name"])  # each product should appear once
+    
         # Create Total row
         total_row = {col: "" for col in location_df.columns}
         total_row["Product Name"] = "Total"
@@ -214,11 +217,6 @@ def split_and_convert_by_location(csv_path):
             location_df["On Floor Inventory (Case Equivs)"], errors="coerce"
         ).sum()
         location_df = pd.concat([location_df, pd.DataFrame([total_row])]).reset_index(drop=True)
-
-        safe_name = "".join(c if c.isalnum() or c in " _-" else "_" for c in str(location)).strip()
-
-        temp_csv = os.path.join(base_dir, f"_temp_consolidated_{safe_name}.csv")
-        location_df.to_csv(temp_csv, index=False)
 
         try:
             pdf_path = csv_to_pdf(temp_csv, skip_location_total=True)
