@@ -194,13 +194,22 @@ def split_and_convert_by_location(csv_path):
     if "Location" not in df.columns:
         raise ValueError(f"'Location' column not found in {csv_path}")
 
+    # Rename the first row of each location group (the source system's Total row)
+    # and drop the blank separator row that follows it
+    cleaned_groups = []
+    for location, group in df.groupby("Location", sort=False):
+        group = group.copy().reset_index(drop=True)
+        group.at[0, "Product Name"] = "Total"          # rename first row to Total
+        group = group[group["Product Name"] != ""].copy()  # drop blank Product Name rows
+        group = group[group["Product Name"].notna()].copy()  # drop NaN Product Name rows
+        cleaned_groups.append(group)
+
+    df = pd.concat(cleaned_groups).reset_index(drop=True)
+
     if "Product Name" in df.columns:
         df = sort_by_product_order(df)
     else:
         print("Warning: 'Product Name' column not found; skipping custom sort.")
-
-    # Drop first 2 rows before split
-    df = df.iloc[2:].reset_index(drop=True)
 
     base_dir = os.path.dirname(csv_path)
     pdf_paths = []
@@ -208,14 +217,6 @@ def split_and_convert_by_location(csv_path):
     for location in df["Location"].unique():
         location_df = df[df["Location"] == location].copy()
         location_df = location_df.drop_duplicates(subset=["Product Name"])
-
-        # Create Total row
-        total_row = {col: "" for col in location_df.columns}
-        total_row["Product Name"] = "Total"
-        total_row["On Floor Inventory (Case Equivs)"] = pd.to_numeric(
-            location_df["On Floor Inventory (Case Equivs)"], errors="coerce"
-        ).sum()
-        location_df = pd.concat([location_df, pd.DataFrame([total_row])]).reset_index(drop=True)
 
         safe_name = "".join(c if c.isalnum() or c in " _-" else "_" for c in str(location)).strip()
         temp_csv = os.path.join(base_dir, f"_temp_consolidated_{safe_name}.csv")
