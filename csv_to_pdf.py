@@ -5,13 +5,11 @@ from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
 
-# Update this path to point to report 5 storecounts CSV
-STORECOUNTS_PATH = None  
-DOWNLOAD_DIR = None  # Will be set by main.py
-DASHBOARD_URL = None  # Will be set by main.py
-
+STORECOUNTS_PATH = None
+DOWNLOAD_DIR = None
+DASHBOARD_URL = None
 _storecounts_df = None
-_eda_run_for_first_report = False  # Flag to ensure EDA only runs once
+_eda_run_for_first_report = False
 
 def set_storecounts_path(storecounts_path):
     global STORECOUNTS_PATH, _storecounts_df
@@ -23,7 +21,6 @@ def set_storecounts_path(storecounts_path):
         _storecounts_df = pd.DataFrame(columns=['Distributor Location', 'Product Name', 'StoreCount'])
 
 def set_eda_config(download_dir, dashboard_url):
-    """Set configuration for EDA dashboard"""
     global DOWNLOAD_DIR, DASHBOARD_URL
     DOWNLOAD_DIR = download_dir
     DASHBOARD_URL = dashboard_url
@@ -47,73 +44,24 @@ def sort_by_product_order(df):
         return len(PREFIX_ORDER)
 
     df = df.copy()
-    
-    top_rows = df.iloc[:2]          # lock in first two rows
-    rest = df.iloc[2:].copy()       # only sort rows from index 2 onward
-    
+
+    top_rows = df.iloc[:2]
+    rest = df.iloc[2:].copy()
+
     rest["_sort_key"] = rest["Product Name"].apply(get_sort_key)
     rest = rest.sort_values("_sort_key").drop(columns=["_sort_key"])
-    
+
     df = pd.concat([top_rows, rest]).reset_index(drop=True)
     return df
-    
-def split_and_convert_by_location(csv_path):
-    """
-    Reads a CSV, splits it into one DataFrame per unique 'Location' value,
-    writes each slice to a temp CSV, converts it to PDF via csv_to_pdf(),
-    and returns the list of resulting PDF paths.
-    """
-    import tempfile
 
-    df = pd.read_csv(csv_path)
-
-    if "Location" not in df.columns:
-        raise ValueError(f"'Location' column not found in {csv_path}")
-
-    # Sort by custom product order before splitting
-    if "Product Name" in df.columns:
-        df = sort_by_product_order(df)
-    else:
-        print("Warning: 'Product Name' column not found; skipping custom sort.")
-
-    base_dir = os.path.dirname(csv_path)
-    pdf_paths = []
-
-    for location in df["Location"].unique():
-        location_df = df[df["Location"] == location].copy()
-
-        # Sanitise the location name for use in a filename
-        safe_name = "".join(c if c.isalnum() or c in " _-" else "_" for c in str(location)).strip()
-
-        # Write the slice to a temp CSV so csv_to_pdf() can process it normally
-        temp_csv = os.path.join(base_dir, f"_temp_consolidated_{safe_name}.csv")
-        location_df.to_csv(temp_csv, index=False)
-
-        try:
-            pdf_path = csv_to_pdf(temp_csv)
-            if pdf_path and os.path.isfile(pdf_path):
-                # Rename the PDF to something meaningful (drop the _temp_ prefix)
-                final_pdf = os.path.join(base_dir, f"Consolidated_{safe_name}.pdf")
-                os.replace(pdf_path, final_pdf)
-                pdf_paths.append(final_pdf)
-                print(f"Created location PDF: {os.path.basename(final_pdf)}")
-        except Exception as e:
-            print(f"Failed to convert location '{location}': {e}")
-        finally:
-            if os.path.exists(temp_csv):
-                os.remove(temp_csv)
-
-    return pdf_paths
-
-def csv_to_pdf(csv_path, run_eda_on_first=False):
+def csv_to_pdf(csv_path, run_eda_on_first=False, skip_location_total=False):
     global _storecounts_df, _eda_run_for_first_report
+
     df = pd.read_csv(csv_path)
 
-    # Only merge if storecounts DataFrame is loaded and not empty
     if _storecounts_df is not None and not _storecounts_df.empty:
         if 'Location' in df.columns and 'Product Name' in df.columns and \
-           'Distributor Location' in _storecounts_df.columns and 'Product Name' in _storecounts_df.columns:
-    
+                'Distributor Location' in _storecounts_df.columns and 'Product Name' in _storecounts_df.columns:
             df = pd.merge(
                 df,
                 _storecounts_df[['Distributor Location', 'Product Name', 'StoreCount_30days', 'StoreCount_60days', 'StoreCount_90days']],
@@ -125,36 +73,28 @@ def csv_to_pdf(csv_path, run_eda_on_first=False):
         else:
             print(f"Required columns missing in {os.path.basename(csv_path)} or storecounts; skipping storecounts merge")
 
-    # Run EDA on the FIRST report AFTER merge but BEFORE PDF conversion
     if run_eda_on_first and not _eda_run_for_first_report and DOWNLOAD_DIR and DASHBOARD_URL:
-        _eda_run_for_first_report = True  # Set flag so we only run once
-        
+        _eda_run_for_first_report = True
         print(f"\n{'='*60}")
         print(f"Running EDA on merged data: {os.path.basename(csv_path)}")
         print(f"{'='*60}")
-        
-        # Save merged dataframe to temporary CSV for EDA
+
         temp_csv_path = os.path.join(DOWNLOAD_DIR, "temp_merged_for_eda.csv")
         df.to_csv(temp_csv_path, index=False)
         print(f"Saved merged data to: {temp_csv_path}")
 
-        # Debug: Print column names
         print("\n=== DEBUG: Column Names (After Merge) ===")
         print(f"Total columns: {len(df.columns)}")
         for i, col in enumerate(df.columns, 1):
             print(f"  {i}. {col}")
         print("=== END Column Names ===\n")
-        
-        
-        # Run EDA
+
         try:
             from run_auto_eda import run_eda_and_download_report
             from datetime import datetime
             import shutil
-            
             print("Note: Dashboard may take 1-2 minutes to wake up if it's on Render free tier...")
             eda_pdf_path = run_eda_and_download_report(temp_csv_path, DASHBOARD_URL, DOWNLOAD_DIR)
-            
             if eda_pdf_path and os.path.isfile(eda_pdf_path):
                 today = datetime.now().strftime("%Y-%m-%d")
                 target_eda_pdf_name = f"Report_{today}_EDA.pdf"
@@ -167,40 +107,32 @@ def csv_to_pdf(csv_path, run_eda_on_first=False):
             print(f"✗ Failed to run EDA: {e}")
             print("  Continuing with PDF conversion...")
         finally:
-            # Clean up temp CSV
             if os.path.exists(temp_csv_path):
                 os.remove(temp_csv_path)
-        
         print(f"{'='*60}\n")
 
     if df.empty:
         raise ValueError(f"CSV file '{csv_path}' is empty after processing.")
 
-    if "Location" in df.columns and "Product Name" in df.columns:
-        df["Location_shift"] = df["Location"].shift(1)
-        new_location_mask = df["Location"] != df["Location_shift"]
-        df.loc[new_location_mask, "Product Name"] = "Total"
-        df = df.drop(columns=["Location_shift"])
+    if not skip_location_total:
+        if "Location" in df.columns and "Product Name" in df.columns:
+            df["Location_shift"] = df["Location"].shift(1)
+            new_location_mask = df["Location"] != df["Location_shift"]
+            df.loc[new_location_mask, "Product Name"] = "Total"
+            df = df.drop(columns=["Location_shift"])
 
     df = df.drop_duplicates()
 
-    #NEWLY added
     required_cols = {"Product Name", "On Floor Inventory (Cases)", "Location"}
-
     if required_cols.issubset(df.columns):
-        
-        # Only convert if column exists
         df["On Floor Inventory (Cases)"] = pd.to_numeric(
             df["On Floor Inventory (Cases)"], errors="coerce"
         )
-        
         zero_total_locations = df[
             (df["Product Name"] == "Total") &
             (df["On Floor Inventory (Cases)"] == 0.0)
         ]["Location"].unique()
-    
         df = df[~df["Location"].isin(zero_total_locations)]
-    
     else:
         print(f"Skipping zero-total filter for {os.path.basename(csv_path)} (missing required columns)")
 
@@ -235,7 +167,6 @@ def csv_to_pdf(csv_path, run_eda_on_first=False):
         col_widths = [w * scale_factor for w in col_widths]
 
     table = Table(data, repeatRows=1, colWidths=col_widths)
-
     style = TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#d9d9d9")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.HexColor("#000000")),
@@ -252,8 +183,43 @@ def csv_to_pdf(csv_path, run_eda_on_first=False):
         ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
     ])
     table.setStyle(style)
-
     pdf.build([table])
-
     print(f"Converted {os.path.basename(csv_path)} → {os.path.basename(pdf_path)}")
     return pdf_path
+
+def split_and_convert_by_location(csv_path):
+    df = pd.read_csv(csv_path)
+
+    if "Location" not in df.columns:
+        raise ValueError(f"'Location' column not found in {csv_path}")
+
+    if "Product Name" in df.columns:
+        df = sort_by_product_order(df)
+    else:
+        print("Warning: 'Product Name' column not found; skipping custom sort.")
+
+    base_dir = os.path.dirname(csv_path)
+    pdf_paths = []
+
+    for location in df["Location"].unique():
+        location_df = df[df["Location"] == location].copy()
+
+        safe_name = "".join(c if c.isalnum() or c in " _-" else "_" for c in str(location)).strip()
+
+        temp_csv = os.path.join(base_dir, f"_temp_consolidated_{safe_name}.csv")
+        location_df.to_csv(temp_csv, index=False)
+
+        try:
+            pdf_path = csv_to_pdf(temp_csv, skip_location_total=True)
+            if pdf_path and os.path.isfile(pdf_path):
+                final_pdf = os.path.join(base_dir, f"Consolidated_{safe_name}.pdf")
+                os.replace(pdf_path, final_pdf)
+                pdf_paths.append(final_pdf)
+                print(f"Created location PDF: {os.path.basename(final_pdf)}")
+        except Exception as e:
+            print(f"Failed to convert location '{location}': {e}")
+        finally:
+            if os.path.exists(temp_csv):
+                os.remove(temp_csv)
+
+    return pdf_paths
