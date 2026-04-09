@@ -46,13 +46,15 @@ def sort_by_product_order(df):
 
     df = df.copy()
 
-    top_rows = df.iloc[:2]
-    rest = df.iloc[2:].copy()
+    # Pin these rows to the top regardless of position
+    pinned_mask = df["Product Name"].isin(["Total", "<i>*Products Not mapped</i>"])
+    pinned_rows = df[pinned_mask]
+    rest = df[~pinned_mask].copy()
 
     rest["_sort_key"] = rest["Product Name"].apply(get_sort_key)
     rest = rest.sort_values("_sort_key").drop(columns=["_sort_key"])
 
-    df = pd.concat([top_rows, rest]).reset_index(drop=True)
+    df = pd.concat([pinned_rows, rest]).reset_index(drop=True)
     return df
 
 def csv_to_pdf(csv_path, run_eda_on_first=False, skip_location_total=False):
