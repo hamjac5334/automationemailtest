@@ -41,7 +41,10 @@ GEORGIA_RECIPIENTS = [
 ]
 
 CONSOLIDATED_RECIPIENTS = [
-    "jackson@bogmayer.com"
+    "jackson@bogmayer.com",
+    "michael.gallo@islandbrandsusa.com",
+    "mason.holland@hollandplace.net"
+    
 ]
 
 
