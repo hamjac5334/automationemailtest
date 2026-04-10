@@ -16,28 +16,28 @@ GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
 #GMAIL_RECIPIENTS = ["jackson@bogmayer.com"]
 
 MAIN_RECIPIENTS = [
-    "jackson@bogmayer.com" #add comma here
-    #"mason.holland@hollandplace.net",
-    #"chad.elkins@tapsandtables.net",
-    #"jared@bogmayer.com",
-    #"ben@rustybullbrewing.com" 
+    "jackson@bogmayer.com",
+    "mason.holland@hollandplace.net",
+    "chad.elkins@tapsandtables.net",
+    "jared@bogmayer.com",
+    "ben@rustybullbrewing.com" 
 ]
 
 CHARLESTON_RECIPIENTS = [
-    "jackson@bogmayer.com" #add comma here
-    #"michael.gallo@islandbrandsusa.com",
-    #"carter@islandbrandsusa.com",
-    #"lauryn@rustybullbrewing.com", 
-    #"max@southernbarrel.com", 
-    #"ben@rustybullbrewing.com"
+    "jackson@bogmayer.com", 
+    "michael.gallo@islandbrandsusa.com",
+    "carter@islandbrandsusa.com",
+    "lauryn@rustybullbrewing.com", 
+    "max@southernbarrel.com", 
+    "ben@rustybullbrewing.com"
     
 ]
 
 GEORGIA_RECIPIENTS = [
-    "jackson@bogmayer.com" #add comma here
-    #"michael.gallo@islandbrandsusa.com",
-    #"max@southernbarrel.com", 
-    #"ben@rustybullbrewing.com"
+    "jackson@bogmayer.com", 
+    "michael.gallo@islandbrandsusa.com",
+    "max@southernbarrel.com", 
+    "ben@rustybullbrewing.com"
 ]
 
 CONSOLIDATED_RECIPIENTS = [
