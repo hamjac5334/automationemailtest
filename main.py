@@ -26,8 +26,7 @@ MAIN_RECIPIENTS = [
 CHARLESTON_RECIPIENTS = [
     "jackson@bogmayer.com", 
     "michael.gallo@islandbrandsusa.com",
-    "carter@islandbrandsusa.com",
-    "lauryn@rustybullbrewing.com", 
+    "jared@bogmayer.com",
     "max@southernbarrel.com", 
     "ben@rustybullbrewing.com"
     
