@@ -65,6 +65,7 @@ REPORTS = [
     ("Rusty Bull", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153712"), 
     ("Southern Barrel", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24153732"),
     ("Georgia_All_SCP", "https://dsdlink.com/Home?DashboardID=100120&ReportID=24478351"),
+    ("Chs_SB_MAX", "https://dsdlink.com/Home?DashboardID=100120&ReportID=25805551"),
 
     #fourth report group
     #South Carolina Consolidated Inventory
@@ -194,7 +195,7 @@ main_pdfs = all_pdfs.copy()
 
 #Indexing for bottom groups
 CHARLESTON_INDEXES = [0,7, 8] 
-GEORGIA_INDEXES = [7,8,9] 
+GEORGIA_INDEXES = [7,8,9, 10] 
 
 
 charleston_pdfs = [
