@@ -17,7 +17,7 @@ GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS")
 
 MAIN_RECIPIENTS = [
     "jackson@bogmayer.com"
-    "mason.holland@hollandplace.net",
+    #"mason.holland@hollandplace.net",
     #"chad.elkins@tapsandtables.net",
     #"jared@bogmayer.com",
     #"ben@rustybullbrewing.com" 
